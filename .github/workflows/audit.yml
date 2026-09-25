@@ -1,0 +1,46 @@
+name: Audit completed listings
+
+on:
+  workflow_dispatch:
+    inputs:
+      sheet_url:
+        description: "Google Sheet URL (optional if AUDIT_SHEET_URL repository variable is set)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      INPUT_SHEET_URL: ${{ inputs.sheet_url }}
+      DEFAULT_SHEET_URL: ${{ vars.AUDIT_SHEET_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Resolve input
+        shell: bash
+        run: |
+          if [[ -n "$INPUT_SHEET_URL" ]]; then
+            echo "SHEET_URL=$INPUT_SHEET_URL" >> "$GITHUB_ENV"
+          elif [[ -n "$DEFAULT_SHEET_URL" ]]; then
+            echo "SHEET_URL=$DEFAULT_SHEET_URL" >> "$GITHUB_ENV"
+          else
+            echo "Provide sheet_url or set the AUDIT_SHEET_URL repository variable." >&2
+            exit 1
+          fi
+      - name: Run audit
+        continue-on-error: true
+        run: listing-auditor audit --sheet-url "$SHEET_URL" --out reports
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: listing-audit-report
+          path: reports/
+          if-no-files-found: warn
+
