@@ -27,6 +27,8 @@ def _issue_type(field: str, severity: str) -> str:
         return "合规风险"
     if field.startswith("image_"):
         return "图片问题"
+    if field.startswith("copy_"):
+        return "文案修改建议"
     if field in {"brand", "model"}:
         return "上下文不对应"
     if field in {"evidence", "erp_evidence"} or severity == "REVIEW":

@@ -19,6 +19,9 @@ Amazon text/spec fields   MAIN + PT01-PT08       ERP GraphQL or export
                     image-consistency rules
                            |
                            v
+       style-aligned copy correction drafts when needed
+                           |
+                           v
         JSON + CSV + Markdown + Excel issue output
 ```
 
@@ -49,6 +52,10 @@ The adapter queries `productTableFilterable` by exact `sku` and normalizes the p
 The first worksheet is the action list and contains findings only. Each row is one issue, so one product can have several rows. The editable review fields are highlighted and include a status dropdown. A second worksheet preserves source evidence for the products that have findings.
 
 GitHub Actions always uploads the Excel workbook together with machine-readable JSON/CSV and a Markdown summary, even when the audit command returns a mismatch exit code.
+
+## Copy correction boundary
+
+Listings with actionable text/specification findings receive separate Title, Bullet Points, and Product Description correction rows. Drafts follow the adapted generation style reference but use only mapped Input/ERP facts. Missing facts remain explicit `[[VERIFY ...]]` placeholders, so the system cannot silently turn an assumption into publishable copy.
 
 ## Image audit boundary
 

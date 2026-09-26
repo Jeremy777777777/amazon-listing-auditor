@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from .compliance import check_compliance
+from .copy_style import style_correction_findings
 from .models import AuditResult, ERPRecord, Evidence, Finding, ListingRecord
 
 
@@ -122,6 +123,7 @@ def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = N
 
     findings.extend(check_compliance(record, evidence))
     findings.extend(additional_findings or [])
+    findings.extend(style_correction_findings(record, evidence, erp, findings))
 
     status = "FAIL" if any(f.severity in {"CRITICAL", "HIGH"} for f in findings) else ("REVIEW" if findings else "PASS")
     return AuditResult(record, status, findings, evidence, erp)

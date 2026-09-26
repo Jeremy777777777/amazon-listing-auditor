@@ -2,7 +2,7 @@
 
 一个独立的 Amazon listing QA workflow，用 Google Sheet、人工输入和内部 ERP 资料交叉检查已完成的 MegaPC / JTD customized listings。这个仓库只负责审核，不属于 `create-custom-pc-listing`。
 
-## v0.4 审核范围
+## v0.5 审核范围
 
 - 输入方式：Google Sheet、CSV export、人工提供内部编号（如 `VL-1249`）与产品名称，或只提供一个 Amazon URL。
 - Amazon evidence：Title、bullets、Product Description、Product information，以及 MAIN / PT01–PT08 图片 URL。
@@ -10,6 +10,7 @@
 - 规格检查：品牌/型号上下文不对应、CPU/显示/内存/储存/OS/功能规格冲突，以及 ERP 与输入冲突。
 - Compliance 检查：seller-brand-first、Customized / Created Using、RAM/储存、第一条 warranty、只允许 RAM/储存 customization、绝对化 claim 等规则。
 - 图片检查：格式、尺寸、zoom、正方形、MAIN 白底与构图、重复图；再结合 OCR/视觉或人工 observation 检查错误 OEM/型号、图片 claims、价格/评价/Amazon 标识、联系方式、端口/配件、素材授权等。
+- 文案修改建议：当 Title、Bullet Points 或 Product Description 存在问题时，按 generation 项目既有 style 输出三组可人工复核的建议文案。
 - 抓取失败或资料不足时标记为 `REVIEW`，不会误报成 `PASS`。
 
 ## Excel output
@@ -29,6 +30,8 @@
 - 人工审核状态、最终修改 / 备注、审核人与日期
 
 第二个 tab `Source Evidence` 保存 Amazon 与 ERP 的字段级 evidence，便于后续人工复查。
+
+Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 写入问题清单。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。
 
 ## 已固化的回归案例
 
@@ -94,5 +97,7 @@ Amazon 可能返回 bot challenge。此时 workflow 会记录 `REVIEW`；product
 ## Compliance 说明
 
 本仓库保存了从 generation 项目中适配出的 versioned audit rule pack：`references/compliance-audit-rules.md` 与 `references/image-audit-rules.md`。它们用于内部 QA，不替代 Amazon 当前政策或法律判断。
+
+文案建议遵循 `references/listing-copy-style.md`，该文件适配自 `create-custom-pc-listing/references/listing-style-guide.md` 与 `compliance-rules.md`。
 
 详细设计见 [docs/architecture.md](docs/architecture.md)。

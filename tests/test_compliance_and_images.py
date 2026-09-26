@@ -4,6 +4,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from listing_auditor.compliance import check_compliance
+from listing_auditor.copy_style import style_correction_findings
 from listing_auditor.evidence import _AmazonParser
 from listing_auditor.image_audit import audit_images
 from listing_auditor.models import Evidence, ListingRecord
@@ -94,3 +95,19 @@ def test_amazon_parser_captures_bullets_and_gallery_images() -> None:
         "https://m.media-amazon.com/images/I/MAIN.jpg",
         "https://m.media-amazon.com/images/I/PT01.jpg",
     ]
+
+
+def test_style_aligned_copy_corrections() -> None:
+    evidence = Evidence(
+        url=_record().url,
+        title="Lenovo ThinkPad X1 Carbon Gen 13",
+        bullets=["Fast business performance"],
+        description="Generic description",
+        source="test fixture",
+    )
+    findings = style_correction_findings(_record(), evidence, None, check_compliance(_record(), evidence))
+    corrections = {finding.field: finding.corrected_value for finding in findings}
+    assert corrections["copy_title"].startswith("MegaPC Customized Laptop, Created Using Dell 15 DC15250")
+    assert corrections["copy_bullet_points"].startswith("1. WARRANTY:")
+    assert "**Memory & Storage, Customized by MegaPC**\\\n" in corrections["copy_product_description"]
+    assert corrections["copy_product_description"].splitlines()[-2] == "**Warranty**\\"
