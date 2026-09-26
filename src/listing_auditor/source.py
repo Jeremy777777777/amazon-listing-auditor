@@ -40,9 +40,21 @@ def download_sheet_csv(url: str) -> str:
     return payload
 
 
-def load_records(*, input_path: Path | None = None, sheet_url: str | None = None) -> list[ListingRecord]:
-    if bool(input_path) == bool(sheet_url):
-        raise ValueError("Provide exactly one of --input or --sheet-url")
+def load_records(
+    *, input_path: Path | None = None, sheet_url: str | None = None,
+    internal_id: str | None = None, product_name: str | None = None,
+    amazon_url: str | None = None, seller: str = "Manual",
+) -> list[ListingRecord]:
+    manual = any([internal_id, product_name, amazon_url])
+    if sum([bool(input_path), bool(sheet_url), manual]) != 1:
+        raise ValueError("Provide exactly one source: --input, --sheet-url, or all manual input fields")
+    if manual:
+        if not all([internal_id, product_name, amazon_url]):
+            raise ValueError("Manual mode requires --internal-id, --product-name, and --amazon-url")
+        asin_match = ASIN_RE.search(amazon_url or "")
+        if not asin_match:
+            raise ValueError("--amazon-url must contain a valid 10-character ASIN")
+        return [ListingRecord((product_name or "").strip(), (internal_id or "").strip(), seller.strip() or "Manual", (amazon_url or "").strip(), asin_match.group(1).upper(), 0)]
     text = input_path.read_text(encoding="utf-8-sig") if input_path else download_sheet_csv(sheet_url or "")
     rows = list(csv.reader(io.StringIO(text)))
     return select_completed(rows)
@@ -86,4 +98,3 @@ def select_completed(rows: list[list[str]]) -> list[ListingRecord]:
                 )
             )
     return records
-

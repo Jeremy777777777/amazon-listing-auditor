@@ -19,6 +19,7 @@ class Evidence:
     title: str = ""
     bullets: list[str] = field(default_factory=list)
     description: str = ""
+    details: dict[str, str] = field(default_factory=dict)
     source: str = ""
     captured_at: str = ""
     available: bool = True
@@ -26,7 +27,17 @@ class Evidence:
 
     @property
     def text(self) -> str:
-        return " ".join([self.title, *self.bullets, self.description]).strip()
+        detail_text = " ".join(f"{key}: {value}" for key, value in self.details.items())
+        return " ".join([self.title, *self.bullets, self.description, detail_text]).strip()
+
+
+@dataclass(frozen=True)
+class ERPRecord:
+    internal_id: str
+    fields: dict[str, str] = field(default_factory=dict)
+    source: str = ""
+    available: bool = False
+    error: str = ""
 
 
 @dataclass(frozen=True)
@@ -36,6 +47,9 @@ class Finding:
     observed: str
     severity: str
     reason: str
+    evidence_source: str = ""
+    erp_value: str = ""
+    corrected_value: str = ""
 
 
 @dataclass
@@ -44,7 +58,7 @@ class AuditResult:
     status: str
     findings: list[Finding]
     evidence: Evidence
+    erp: ERPRecord | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
-

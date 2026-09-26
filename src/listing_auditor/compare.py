@@ -2,14 +2,33 @@ from __future__ import annotations
 
 import re
 
-from .models import AuditResult, Evidence, Finding, ListingRecord
+from .compliance import check_compliance
+from .models import AuditResult, ERPRecord, Evidence, Finding, ListingRecord
 
 
 BRANDS = ["Dell", "Lenovo", "HP", "LG", "Acer", "ASUS", "Microsoft", "Samsung", "Apple", "MegaPC"]
-CPU_RE = re.compile(r"(?:Intel\s+)?(?:Core\s+)?(?:Ultra\s+\d+\s+\d+[A-Z]*|i[3579]-\d{4,5}[A-Z]*)", re.I)
-RESOLUTION_RE = re.compile(r"\b(\d{3,4})\s*[x×]\s*(\d{3,4})\b", re.I)
-SIZE_RE = re.compile(r"\b(\d{2}(?:\.\d)?)\s*(?:inch|inches|\")", re.I)
-HZ_RE = re.compile(r"\b(\d{2,3})\s*Hz\b", re.I)
+PATTERNS = {
+    "cpu": re.compile(r"(?:Intel\s+)?(?:Core\s+)?(?:Ultra\s+\d+\s+\d+[A-Z]*|i[3579]-\d{4,5}[A-Z]*)", re.I),
+    "resolution": re.compile(r"\b(\d{3,4})\s*[x×]\s*(\d{3,4})\b", re.I),
+    "display_size": re.compile(r"\b(\d{2}(?:\.\d)?)\s*[-–]?\s*(?:inch|inches|\")", re.I),
+    "refresh_rate": re.compile(r"\b(\d{2,3})\s*Hz\b", re.I),
+    "memory": re.compile(r"\b(\d{1,3})\s*GB\s*(?:LPDDR\w*|DDR\w*|RAM|Memory)?", re.I),
+    "storage": re.compile(r"\b(\d+(?:\.\d+)?)\s*(TB|GB)\s*(?:SSD|NVMe|M\.2|HDD)", re.I),
+    "os": re.compile(r"\bWindows\s+1[01]\s+(?:Pro|Home)\b", re.I),
+}
+BOOLEAN_TERMS = {
+    "touchscreen": r"\btouch(?:screen|able)?\b",
+    "fingerprint": r"\bfingerprint\b",
+    "bluetooth": r"\bbluetooth\b",
+    "backlit": r"\bbacklit\b",
+    "wifi": r"\b(?:wi-?fi|wireless)\b",
+}
+ERP_KEYS = {
+    "cpu": "cpu", "resolution": "resolution", "display_size": "screenSize",
+    "refresh_rate": "refreshRate", "memory": "ram", "storage": "ssd", "os": "os",
+    "touchscreen": "touchable", "fingerprint": "fingerprint", "bluetooth": "bluetooth",
+    "backlit": "backlit", "wifi": "wifi", "model": "model", "brand": "brand",
+}
 
 
 def _brand(text: str) -> str:
@@ -19,9 +38,8 @@ def _brand(text: str) -> str:
     return ""
 
 
-def _model(expected: str) -> str:
-    # Tracker convention: the first slash-delimited segment is Brand + model family.
-    first = expected.split("/", 1)[0].strip()
+def _model(text: str) -> str:
+    first = text.split("/", 1)[0].strip()
     brand = _brand(first)
     return re.sub(rf"^{re.escape(brand)}\s+", "", first, flags=re.I).strip() if brand else first
 
@@ -32,38 +50,63 @@ def _first(pattern: re.Pattern[str], text: str) -> str:
         return ""
     if len(match.groups()) > 1:
         return " x ".join(match.groups())
-    if len(match.groups()) == 1:
-        return match.group(1)
-    return match.group(0)
+    return match.group(1) if match.groups() else match.group(0)
 
 
-def compare(record: ListingRecord, evidence: Evidence) -> AuditResult:
-    if not evidence.available or not evidence.text:
-        finding = Finding("evidence", "Readable listing page", evidence.error or "No text", "REVIEW", "Listing evidence is unavailable; manual review required.")
-        return AuditResult(record, "REVIEW", [finding], evidence)
+def _facts(text: str) -> dict[str, str]:
+    facts = {field: _first(pattern, text) for field, pattern in PATTERNS.items()}
+    facts["brand"] = _brand(text)
+    facts["model"] = _model(text)
+    for field, term in BOOLEAN_TERMS.items():
+        facts[field] = "true" if re.search(term, text, re.I) else ""
+    return facts
 
-    expected = record.product_name
-    observed = evidence.text
+
+def _norm(value: str) -> str:
+    value = value.casefold().replace("×", "x")
+    return re.sub(r"[^a-z0-9]+", "", value)
+
+
+def _erp_facts(erp: ERPRecord | None) -> dict[str, str]:
+    if not erp or not erp.available:
+        return {}
+    facts: dict[str, str] = {}
+    for field, key in ERP_KEYS.items():
+        raw = erp.fields.get(key, "")
+        if field in PATTERNS and raw:
+            facts[field] = _first(PATTERNS[field], raw)
+        elif field in BOOLEAN_TERMS and raw.casefold() in {"true", "yes", "1", "supported"}:
+            facts[field] = "true"
+        else:
+            facts[field] = raw
+    return facts
+
+
+def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = None) -> AuditResult:
     findings: list[Finding] = []
-    expected_brand, observed_brand = _brand(expected), _brand(observed)
-    if expected_brand and observed_brand and expected_brand.lower() != observed_brand.lower():
-        findings.append(Finding("brand", expected_brand, observed_brand, "CRITICAL", "The listing describes a different manufacturer."))
+    if not evidence.available or not evidence.text:
+        findings.append(Finding("evidence", "Readable listing page", evidence.error or "No text", "REVIEW", "Amazon listing evidence is unavailable.", evidence.source))
+        return AuditResult(record, "REVIEW", findings, evidence, erp)
 
-    expected_model = _model(expected)
-    if expected_model and not re.search(re.escape(expected_model), observed, re.I):
-        observed_identity = " ".join(observed.split()[:14])
-        findings.append(Finding("model", expected_model, observed_identity, "CRITICAL", "The expected model/family is absent from listing evidence."))
+    expected, observed, erp_facts = _facts(record.product_name), _facts(evidence.text), _erp_facts(erp)
+    expected["model"] = _model(record.product_name)
+    observed["model"] = expected["model"] if re.search(re.escape(expected["model"]), evidence.text, re.I) else evidence.title
+    fields = ["brand", "model", "cpu", "resolution", "display_size", "refresh_rate", "memory", "storage", "os", *BOOLEAN_TERMS]
+    for field in fields:
+        exp, obs, erp_value = expected.get(field, ""), observed.get(field, ""), erp_facts.get(field, "")
+        if exp and obs and _norm(exp) != _norm(obs):
+            severity = "CRITICAL" if field in {"brand", "model"} else "HIGH"
+            corrected = exp if not erp_value or _norm(erp_value) == _norm(exp) else "MANUAL REVIEW"
+            findings.append(Finding(field, exp, obs, severity, f"Amazon {field} conflicts with the input record.", evidence.source, erp_value, corrected))
+        if erp_value and exp and _norm(erp_value) != _norm(exp):
+            findings.append(Finding(field, exp, obs, "REVIEW", f"ERP {field} conflicts with the input record.", erp.source if erp else "ERP", erp_value, "MANUAL REVIEW"))
+        if erp_value and obs and _norm(erp_value) != _norm(obs) and not any(f.field == field and f.observed == obs for f in findings):
+            findings.append(Finding(field, exp, obs, "HIGH", f"Amazon {field} conflicts with ERP.", evidence.source, erp_value, erp_value))
 
-    for field, pattern in [("cpu", CPU_RE), ("resolution", RESOLUTION_RE), ("display_size", SIZE_RE), ("refresh_rate", HZ_RE)]:
-        expected_value = _first(pattern, expected)
-        observed_value = _first(pattern, observed)
-        if expected_value and observed_value and expected_value.lower().replace(" ", "") != observed_value.lower().replace(" ", ""):
-            findings.append(Finding(field, expected_value, observed_value, "HIGH", f"Explicit {field} values conflict."))
+    if erp and not erp.available:
+        findings.append(Finding("erp_evidence", "Matching ERP record", erp.error or "Unavailable", "REVIEW", "ERP could not confirm this internal ID.", erp.source))
 
-    expected_touch = bool(re.search(r"\btouch(?:screen)?\b", expected, re.I))
-    observed_touch = bool(re.search(r"\btouch(?:screen)?\b", observed, re.I))
-    if expected_touch != observed_touch:
-        findings.append(Finding("touchscreen", str(expected_touch), str(observed_touch), "HIGH", "Touch capability does not match."))
+    findings.extend(check_compliance(evidence))
 
-    status = "FAIL" if findings else "PASS"
-    return AuditResult(record, status, findings, evidence)
+    status = "FAIL" if any(f.severity in {"CRITICAL", "HIGH"} for f in findings) else ("REVIEW" if findings else "PASS")
+    return AuditResult(record, status, findings, evidence, erp)
