@@ -4,6 +4,15 @@
   "source": "manually captured Amazon product description",
   "title": "MegaPC Customized Laptop — Created Using Lenovo ThinkPad X1 Carbon Gen 13",
   "bullets": [],
-  "description": "2.8K OLED Touch, Built for Premium Work. The 14-inch 2880 x 1800 OLED touchscreen delivers a fluid 120Hz variable refresh rate. Intel Core Ultra 7 265U. Fixed 64GB LPDDR5X Memory. Storage Customized by MegaPC. Ultralight ThinkPad Construction. Windows 11 Pro."
+  "description": "2.8K OLED Touch, Built for Premium Work. The 14-inch 2880 x 1800 OLED touchscreen delivers a fluid 120Hz variable refresh rate. Intel Core Ultra 7 265U. Fixed 64GB LPDDR5X Memory. Storage Customized by MegaPC. Ultralight ThinkPad Construction. Windows 11 Pro.",
+  "details": {
+    "Display": "14-inch 2880 x 1800 OLED touchscreen, 120Hz",
+    "Processor": "Intel Core Ultra 7 265U",
+    "Memory": "Fixed 64GB LPDDR5X",
+    "Battery": "57Wh",
+    "Connectivity": "Wi-Fi, Bluetooth, Thunderbolt 4, HDMI 2.1",
+    "Input Devices": "Fingerprint reader, backlit spill-resistant keyboard",
+    "Customizations": "512GB, 1TB, or 2TB M.2 2280 PCIe NVMe SSD",
+    "Warranty": "The original Lenovo manufacturer warranty remains valid on factory components"
+  }
 }
-
