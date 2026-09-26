@@ -3,10 +3,40 @@ name: Audit completed listings
 on:
   workflow_dispatch:
     inputs:
+      input_mode:
+        description: "Audit source"
+        required: true
+        default: sheet
+        type: choice
+        options:
+          - sheet
+          - manual
       sheet_url:
-        description: "Google Sheet URL (optional if AUDIT_SHEET_URL repository variable is set)"
+        description: "Google Sheet URL (or set repository variable AUDIT_SHEET_URL)"
         required: false
         type: string
+      internal_id:
+        description: "Manual mode: internal ID such as VL-1249"
+        required: false
+        type: string
+      product_name:
+        description: "Manual mode: expected product name and specification"
+        required: false
+        type: string
+      amazon_url:
+        description: "Manual mode: Amazon /dp/ URL"
+        required: false
+        type: string
+      seller:
+        description: "Manual mode: seller label"
+        required: false
+        default: MegaPC
+        type: string
+      use_erp:
+        description: "Cross-check the internal ID through the configured ERP GraphQL endpoint"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -15,32 +45,59 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     env:
+      INPUT_MODE: ${{ inputs.input_mode }}
       INPUT_SHEET_URL: ${{ inputs.sheet_url }}
       DEFAULT_SHEET_URL: ${{ vars.AUDIT_SHEET_URL }}
+      INTERNAL_ID: ${{ inputs.internal_id }}
+      PRODUCT_NAME: ${{ inputs.product_name }}
+      AMAZON_URL: ${{ inputs.amazon_url }}
+      SELLER: ${{ inputs.seller }}
+      USE_ERP: ${{ inputs.use_erp }}
+      ERP_GRAPHQL_URL: ${{ vars.ERP_GRAPHQL_URL }}
+      ERP_AUTH_TOKEN: ${{ secrets.ERP_AUTH_TOKEN }}
+      ERP_ADMIN_SECRET: ${{ secrets.ERP_ADMIN_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: python -m pip install -e .
-      - name: Resolve input
+      - name: Run listing audit
+        continue-on-error: true
         shell: bash
         run: |
-          if [[ -n "$INPUT_SHEET_URL" ]]; then
-            echo "SHEET_URL=$INPUT_SHEET_URL" >> "$GITHUB_ENV"
-          elif [[ -n "$DEFAULT_SHEET_URL" ]]; then
-            echo "SHEET_URL=$DEFAULT_SHEET_URL" >> "$GITHUB_ENV"
+          args=(audit --out reports)
+          if [[ "$INPUT_MODE" == "manual" ]]; then
+            if [[ -z "$INTERNAL_ID" || -z "$PRODUCT_NAME" || -z "$AMAZON_URL" ]]; then
+              echo "Manual mode requires internal_id, product_name, and amazon_url." >&2
+              exit 1
+            fi
+            args+=(--internal-id "$INTERNAL_ID" --product-name "$PRODUCT_NAME" --amazon-url "$AMAZON_URL" --seller "$SELLER")
           else
-            echo "Provide sheet_url or set the AUDIT_SHEET_URL repository variable." >&2
-            exit 1
+            sheet_url="${INPUT_SHEET_URL:-$DEFAULT_SHEET_URL}"
+            if [[ -z "$sheet_url" ]]; then
+              echo "Provide sheet_url or set the AUDIT_SHEET_URL repository variable." >&2
+              exit 1
+            fi
+            args+=(--sheet-url "$sheet_url")
           fi
-      - name: Run audit
-        continue-on-error: true
-        run: listing-auditor audit --sheet-url "$SHEET_URL" --out reports
-      - uses: actions/upload-artifact@v4
+          if [[ "$USE_ERP" == "true" ]]; then
+            if [[ -z "$ERP_GRAPHQL_URL" ]]; then
+              echo "use_erp is enabled but ERP_GRAPHQL_URL is not configured." >&2
+              exit 1
+            fi
+            args+=(--erp-graphql-url "$ERP_GRAPHQL_URL")
+          fi
+          listing-auditor "${args[@]}"
+      - name: Upload human-review output
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: listing-audit-report
-          path: reports/
+          name: amazon-listing-audit-output
+          path: |
+            reports/listing-audit-review.xlsx
+            reports/report.json
+            reports/report.csv
+            reports/report.md
           if-no-files-found: warn
-
+          retention-days: 30
