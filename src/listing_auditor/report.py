@@ -42,7 +42,7 @@ def _rows(results: list[AuditResult]) -> list[list[str]]:
                 finding.severity,
                 _issue_type(finding.field, finding.severity),
                 " — ".join(value for value in [finding.rule_id, finding.reference] if value),
-                result.listing.product_name,
+                result.listing.product_name or result.evidence.title or f"Amazon ASIN {result.listing.asin}",
                 result.listing.sku,
                 result.listing.seller,
                 result.listing.asin,

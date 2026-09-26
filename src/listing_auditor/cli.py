@@ -18,9 +18,9 @@ def _parser() -> argparse.ArgumentParser:
     source = audit.add_mutually_exclusive_group(required=True)
     source.add_argument("--input", type=Path, help="Tracker CSV export")
     source.add_argument("--sheet-url", help="Google Sheet URL")
-    source.add_argument("--internal-id", help="Manual internal product ID; requires product name and Amazon URL")
+    source.add_argument("--amazon-url", help="Amazon URL; works alone or with an internal ID and expected product")
+    audit.add_argument("--internal-id", help="Optional internal product ID; requires --product-name")
     audit.add_argument("--product-name", help="Manual expected product name/specification")
-    audit.add_argument("--amazon-url", help="Manual Amazon product URL")
     audit.add_argument("--seller", default="Manual", help="Seller label for manual input")
     audit.add_argument("--erp-export", type=Path, help="ERP CSV or JSON export (safe fallback when API auth is unavailable)")
     audit.add_argument("--erp-graphql-url", help="Authenticated ERP GraphQL endpoint")
@@ -43,7 +43,7 @@ def main() -> int:
     )
     results = []
     for record in records:
-        erp = load_erp_record(record.sku, export_path=args.erp_export, graphql_url=args.erp_graphql_url) if (args.erp_export or args.erp_graphql_url) else None
+        erp = load_erp_record(record.sku, export_path=args.erp_export, graphql_url=args.erp_graphql_url) if record.sku and (args.erp_export or args.erp_graphql_url) else None
         evidence = collect_evidence(record, args.fixtures)
         image_findings = [] if args.skip_image_audit else audit_images(record, evidence, erp, args.image_observations)
         results.append(compare(record, evidence, erp, image_findings))

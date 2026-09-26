@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "amazon-listing-auditor"
-version = "0.3.0"
+version = "0.4.0"
 description = "Audit completed Amazon listings against expected catalog data and evidence."
 readme = "README.md"
 requires-python = ">=3.11"

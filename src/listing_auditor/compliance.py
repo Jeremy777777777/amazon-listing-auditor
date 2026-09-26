@@ -16,7 +16,12 @@ def _finding(rule_id: str, field: str, expected: str, observed: str, severity: s
 def check_compliance(record: ListingRecord, evidence: Evidence) -> list[Finding]:
     findings: list[Finding] = []
     title = evidence.title.strip()
-    seller_brand = SELLER_BRANDS.get(record.seller.casefold(), record.seller.strip())
+    seller_brand = SELLER_BRANDS.get(record.seller.casefold(), "" if record.seller.casefold() in {"", "manual", "unknown"} else record.seller.strip())
+    if not seller_brand:
+        if title.casefold().startswith("megapc"):
+            seller_brand = "MegaPC"
+        elif title.casefold().startswith(("j-tech digital", "jtd")):
+            seller_brand = "J-Tech Digital"
     source = evidence.source or "Amazon listing"
 
     if seller_brand and not title.casefold().startswith(seller_brand.casefold()):

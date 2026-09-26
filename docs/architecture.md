@@ -3,7 +3,7 @@
 ## Pipeline
 
 ```text
-Google Sheet / CSV / Manual input
+Google Sheet / CSV / Manual input / Amazon URL only
               |
               v
 completed listing selector ----> internal ID + expected product + ASIN
@@ -30,6 +30,8 @@ Amazon text/spec fields   MAIN + PT01-PT08       ERP GraphQL or export
 4. Licensed image provenance plus OCR/vision or human visual observations.
 
 Conflicts remain visible instead of being collapsed into one score. Missing evidence is never treated as a successful match.
+
+URL-only inputs receive an explicit `INPUT-BASELINE-001` review finding. They can complete page consistency, compliance and image checks, but cannot receive a full product-match confirmation until an internal ID and canonical product record are mapped.
 
 ## Finding types
 

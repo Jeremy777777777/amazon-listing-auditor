@@ -84,6 +84,18 @@ def _erp_facts(erp: ERPRecord | None) -> dict[str, str]:
 
 def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = None, additional_findings: list[Finding] | None = None) -> AuditResult:
     findings: list[Finding] = []
+    if not record.sku or not record.product_name:
+        findings.append(Finding(
+            field="input_baseline",
+            expected="Internal ID and canonical product specification for full mismatch checking",
+            observed=f"URL-only input for ASIN {record.asin}",
+            severity="REVIEW",
+            reason="The page can be checked for internal consistency, compliance, and image issues, but product-to-ERP mismatch cannot be fully confirmed without a mapped baseline.",
+            evidence_source=record.url,
+            corrected_value="Map this ASIN to an internal ID/product record if full product mismatch confirmation is required.",
+            rule_id="INPUT-BASELINE-001",
+            reference="README.md#url-only-输入",
+        ))
     if not evidence.available or not evidence.text:
         findings.append(Finding("evidence", "Readable listing page", evidence.error or "No text", "REVIEW", "Amazon listing evidence is unavailable.", evidence.source))
         findings.extend(additional_findings or [])

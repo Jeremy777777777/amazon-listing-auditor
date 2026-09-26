@@ -11,6 +11,7 @@ on:
         options:
           - sheet
           - manual
+          - url
       sheet_url:
         description: "Google Sheet URL (or set repository variable AUDIT_SHEET_URL)"
         required: false
@@ -24,11 +25,11 @@ on:
         required: false
         type: string
       amazon_url:
-        description: "Manual mode: Amazon /dp/ URL"
+        description: "Manual or URL mode: Amazon /dp/ URL"
         required: false
         type: string
       seller:
-        description: "Manual mode: seller label"
+        description: "Manual or URL mode: seller label"
         required: false
         default: MegaPC
         type: string
@@ -84,6 +85,12 @@ jobs:
               exit 1
             fi
             args+=(--internal-id "$INTERNAL_ID" --product-name "$PRODUCT_NAME" --amazon-url "$AMAZON_URL" --seller "$SELLER")
+          elif [[ "$INPUT_MODE" == "url" ]]; then
+            if [[ -z "$AMAZON_URL" ]]; then
+              echo "URL mode requires amazon_url." >&2
+              exit 1
+            fi
+            args+=(--amazon-url "$AMAZON_URL" --seller "$SELLER")
           else
             sheet_url="${INPUT_SHEET_URL:-$DEFAULT_SHEET_URL}"
             if [[ -z "$sheet_url" ]]; then
@@ -93,6 +100,10 @@ jobs:
             args+=(--sheet-url "$sheet_url")
           fi
           if [[ "$USE_ERP" == "true" ]]; then
+            if [[ -z "$INTERNAL_ID" ]]; then
+              echo "ERP cross-check requires an internal_id; URL-only mode will still audit the page without ERP." >&2
+              exit 1
+            fi
             if [[ -z "$ERP_GRAPHQL_URL" ]]; then
               echo "use_erp is enabled but ERP_GRAPHQL_URL is not configured." >&2
               exit 1
