@@ -1,0 +1,21 @@
+[
+  {
+    "sku": "VL-1249",
+    "name": "Dell 15 DC15250",
+    "model": "15 DC15250",
+    "brand": {"name": "Dell"},
+    "category": {"name": "Laptop"},
+    "specification": {
+      "cpu": "Intel Core i7-1355U",
+      "screenSize": "15.6 inch",
+      "touchable": true,
+      "fingerprint": true,
+      "bluetooth": true,
+      "resolution": "1920x1080",
+      "refreshRate": "60 Hz",
+      "wifi": true,
+      "color": "Black",
+      "graphicCard": "Intel UHD Graphics"
+    }
+  }
+]
