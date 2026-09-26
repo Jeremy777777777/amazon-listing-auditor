@@ -3,43 +3,45 @@
 ## Pipeline
 
 ```text
-Google Sheet / CSV
-        |
-        v
-completed listing selector ----> one record per seller + ASIN
-        |
-        v
-expected fact extractor <------- official manufacturer evidence (planned)
-        |
-        +-------------------+
-                            v
-Amazon evidence ------> deterministic comparison engine
-                            |
-                            v
-                 JSON + CSV + Markdown report
+Google Sheet / CSV / Manual input
+              |
+              v
+completed listing selector ----> internal ID + expected product + ASIN
+              |                                  |
+              v                                  v
+Amazon title, description,              ERP GraphQL or export
+bullets and Product information                  |
+              |                                  |
+              +------------+---------------------+
+                           v
+          deterministic identity, specification
+                 and compliance review rules
+                           |
+                           v
+        JSON + CSV + Markdown + Excel issue output
 ```
 
-## Guardrails
+## Source priority
 
-- Product identity (`brand`, `model`) is checked before detailed specs.
-- Missing evidence is never treated as a successful match.
-- Conflicting facts are reported individually instead of collapsed into one AI score.
-- A future LLM/research layer may extract candidate facts, but deterministic rules and cited evidence make the final decision reviewable.
-- Seller-customizable fields such as RAM and SSD should be checked against the selected variation, not only the base manufacturer configuration.
+1. Internal input record and ERP product mapped by exact internal ID.
+2. Amazon variation-specific title, bullets, description and Product information.
+3. Manufacturer evidence and approved policy references when available.
 
-## Sheet mapping
+Conflicts remain visible instead of being collapsed into one score. Missing evidence is never treated as a successful match.
 
-The current tracker uses row 3 as headers. For each row, the selector emits:
+## Finding types
 
-- `MegaPC Customized Listing` when its status is `Completed`, using the adjacent `Link` column.
-- `JTD Customized Listing` when its status is `Completed`, using its adjacent `Link` column.
+- `CRITICAL`: wrong manufacturer or model/product family.
+- `HIGH`: explicit contradiction on a buying attribute or between Amazon and ERP.
+- `REVIEW`: insufficient evidence, ERP lookup failure, source conflict, or compliance claim requiring substantiation.
+- `PASS`: no mismatch found in the evidence that was available. PASS records are excluded from the Excel problem list.
 
-Duplicate header names are resolved by position, not by dictionary key.
+## ERP adapter
 
-## Risk levels
+The adapter queries `productTableFilterable` by exact `sku` and normalizes the product and specification fields. Authentication comes only from environment variables. A CSV / JSON export adapter provides a local and auditable fallback.
 
-- `CRITICAL`: wrong brand or model/product family.
-- `HIGH`: explicit contradiction on a key buying attribute.
-- `REVIEW`: page unavailable, evidence missing, or a fact cannot be resolved safely.
-- `PASS`: evidence supports all facts that were available for comparison.
+## Excel review workflow
 
+The first worksheet is the action list and contains findings only. Each row is one issue, so one product can have several rows. The editable review fields are highlighted and include a status dropdown. A second worksheet preserves source evidence for the products that have findings.
+
+GitHub Actions always uploads the Excel workbook together with machine-readable JSON/CSV and a Markdown summary, even when the audit command returns a mismatch exit code.
