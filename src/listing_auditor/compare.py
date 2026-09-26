@@ -82,11 +82,13 @@ def _erp_facts(erp: ERPRecord | None) -> dict[str, str]:
     return facts
 
 
-def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = None) -> AuditResult:
+def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = None, additional_findings: list[Finding] | None = None) -> AuditResult:
     findings: list[Finding] = []
     if not evidence.available or not evidence.text:
         findings.append(Finding("evidence", "Readable listing page", evidence.error or "No text", "REVIEW", "Amazon listing evidence is unavailable.", evidence.source))
-        return AuditResult(record, "REVIEW", findings, evidence, erp)
+        findings.extend(additional_findings or [])
+        status = "FAIL" if any(f.severity in {"CRITICAL", "HIGH"} for f in findings) else "REVIEW"
+        return AuditResult(record, status, findings, evidence, erp)
 
     expected, observed, erp_facts = _facts(record.product_name), _facts(evidence.text), _erp_facts(erp)
     expected["model"] = _model(record.product_name)
@@ -106,7 +108,8 @@ def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = N
     if erp and not erp.available:
         findings.append(Finding("erp_evidence", "Matching ERP record", erp.error or "Unavailable", "REVIEW", "ERP could not confirm this internal ID.", erp.source))
 
-    findings.extend(check_compliance(evidence))
+    findings.extend(check_compliance(record, evidence))
+    findings.extend(additional_findings or [])
 
     status = "FAIL" if any(f.severity in {"CRITICAL", "HIGH"} for f in findings) else ("REVIEW" if findings else "PASS")
     return AuditResult(record, status, findings, evidence, erp)

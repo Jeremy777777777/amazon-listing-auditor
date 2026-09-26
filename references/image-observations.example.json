@@ -1,0 +1,40 @@
+{
+  "listings": {
+    "B0XXXXXXXX": {
+      "internal_id": "VL-XXXX",
+      "images": [
+        {
+      "slot": "MAIN",
+      "url": "https://example.com/B0XXXXXXXX.MAIN.jpg",
+      "ocr_text": "",
+      "main_has_overlay": false,
+      "detected_brand": "Dell",
+      "product_identity": "Dell 15 DC15250",
+      "contains_price": false,
+      "contains_rating": false,
+      "contains_amazon_badge": false,
+      "contains_contact_info": false,
+      "claims": {},
+      "licensed_provenance": "Seller-owned photography"
+        },
+        {
+      "slot": "PT03",
+      "url": "https://example.com/B0XXXXXXXX.PT03.jpg",
+      "ocr_text": "Intel Core i7-1355U, 15.6 inch, 1920x1080",
+      "detected_brand": "Dell",
+      "product_identity": "Dell 15 DC15250",
+      "contains_price": false,
+      "contains_rating": false,
+      "contains_amazon_badge": false,
+      "contains_contact_info": false,
+      "claims": {
+        "cpu": "Intel Core i7-1355U",
+        "display": "15.6 inch",
+        "resolution": "1920x1080"
+      },
+      "licensed_provenance": "Original infographic using authorized OEM media"
+        }
+      ]
+    }
+  }
+}

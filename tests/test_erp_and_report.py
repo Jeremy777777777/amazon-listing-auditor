@@ -31,7 +31,7 @@ def test_erp_export_confirms_internal_product_and_compliance_review() -> None:
     result = compare(record, collect_evidence(record, ROOT / "fixtures" / "listings"), erp)
     assert result.status == "FAIL"
     assert {finding.field for finding in result.findings} >= {
-        "brand", "model", "cpu", "resolution", "display_size", "refresh_rate", "compliance_warranty_claim"
+        "brand", "model", "cpu", "resolution", "display_size", "refresh_rate", "compliance_bullet_1_warranty"
     }
 
 
@@ -48,4 +48,4 @@ def test_excel_contains_only_findings(tmp_path: Path) -> None:
     sheet = workbook["问题清单"]
     assert sheet["A8"].value == "严重程度"
     assert sheet.max_row == 8 + len(fail_result.findings)
-    assert all(sheet.cell(row=row, column=4).value == "VL-1249" for row in range(9, sheet.max_row + 1))
+    assert all(sheet.cell(row=row, column=5).value == "VL-1249" for row in range(9, sheet.max_row + 1))

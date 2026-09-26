@@ -20,6 +20,7 @@ class Evidence:
     bullets: list[str] = field(default_factory=list)
     description: str = ""
     details: dict[str, str] = field(default_factory=dict)
+    image_urls: list[str] = field(default_factory=list)
     source: str = ""
     captured_at: str = ""
     available: bool = True
@@ -50,6 +51,8 @@ class Finding:
     evidence_source: str = ""
     erp_value: str = ""
     corrected_value: str = ""
+    rule_id: str = ""
+    reference: str = ""
 
 
 @dataclass

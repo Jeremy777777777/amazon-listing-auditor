@@ -2,12 +2,14 @@
 
 一个独立的 Amazon listing QA workflow，用 Google Sheet、人工输入和内部 ERP 资料交叉检查已完成的 MegaPC / JTD customized listings。这个仓库只负责审核，不属于 `create-custom-pc-listing`。
 
-## v0.2 审核范围
+## v0.3 审核范围
 
 - 输入方式：Google Sheet、CSV export，或人工提供内部编号（如 `VL-1249`）、产品名称与 Amazon URL。
-- Amazon evidence：Title、bullets、Product Description，以及 Product information 中的 Additional details、Display、Connectivity、Ports & Slots、Processor、Item details、Memory、Battery、Input Devices、Customizations 等区域。
+- Amazon evidence：Title、bullets、Product Description、Product information，以及 MAIN / PT01–PT08 图片 URL。
 - ERP cross-check：通过内部编号查询 ERP GraphQL；本地也支持 ERP CSV / JSON export。
-- 检查类型：品牌/型号上下文不对应、CPU/显示/内存/储存/OS/功能规格冲突、ERP 与输入冲突、证据不足，以及需要人工确认的 compliance claims。
+- 规格检查：品牌/型号上下文不对应、CPU/显示/内存/储存/OS/功能规格冲突，以及 ERP 与输入冲突。
+- Compliance 检查：seller-brand-first、Customized / Created Using、RAM/储存、第一条 warranty、只允许 RAM/储存 customization、绝对化 claim 等规则。
+- 图片检查：格式、尺寸、zoom、正方形、MAIN 白底与构图、重复图；再结合 OCR/视觉或人工 observation 检查错误 OEM/型号、图片 claims、价格/评价/Amazon 标识、联系方式、端口/配件、素材授权等。
 - 抓取失败或资料不足时标记为 `REVIEW`，不会误报成 `PASS`。
 
 ## Excel output
@@ -16,7 +18,7 @@
 
 主要字段包括：
 
-- 严重程度与问题类型
+- 严重程度、问题类型、Rule ID / Reference
 - 产品名称、内部编号、Seller、ASIN
 - 影响位置 / 字段
 - 错误或歧义内容
@@ -43,6 +45,7 @@ listing-auditor audit \
   --input examples/completed-listings.csv \
   --fixtures fixtures/listings \
   --erp-export fixtures/erp/products.json \
+  --image-observations references/image-observations.example.json \
   --out reports
 ```
 
@@ -66,12 +69,17 @@ listing-auditor audit \
 2. Sheet mode 可输入 URL，或设置 repository variable `AUDIT_SHEET_URL`。
 3. Manual mode 填写内部编号、产品名称和 Amazon URL。
 4. 如启用 ERP，设置 repository variable `ERP_GRAPHQL_URL`，并通过 GitHub Secrets 提供 `ERP_AUTH_TOKEN` 或 `ERP_ADMIN_SECRET`。不要把 ERP credential 写入公开仓库。
-5. 运行结束后下载 artifact `amazon-listing-audit-output`；其中 `listing-audit-review.xlsx` 是最终人工复核 output。
+5. 默认开启图片审核；可在仓库中提供 `image-observations JSON` 路径完成 OCR/视觉或人工语义复核。
+6. 运行结束后下载 artifact `amazon-listing-audit-output`；其中 `listing-audit-review.xlsx` 是最终人工复核 output。
 
 Amazon 可能返回 bot challenge。此时 workflow 会记录 `REVIEW`；production 使用时可接 approved browser/provider 或上传已授权采集的 evidence fixture。
 
+## 图片语义复核输入
+
+纯像素规则不能可靠判断图片是不是正确型号、端口是否对应、图片文字是否真实或素材是否获得授权。因此按 `listings.<ASIN>.images` 结构，在 `references/image-observations.example.json` 中为各图片提供 observation；一个文件可以安全覆盖 Sheet 中的多个 listing。未提供或找不到对应 ASIN 时会生成 `IMG-VISUAL-001 / REVIEW`，不会把技术检查通过误当作完整 PASS。
+
 ## Compliance 说明
 
-当前规则只把需要 substantiation 的 warranty / absolute claims 标记为人工复核，不作法律判断。后续可以把正式 Amazon policy 与企业内部规则维护成 versioned rule pack。
+本仓库保存了从 generation 项目中适配出的 versioned audit rule pack：`references/compliance-audit-rules.md` 与 `references/image-audit-rules.md`。它们用于内部 QA，不替代 Amazon 当前政策或法律判断。
 
 详细设计见 [docs/architecture.md](docs/architecture.md)。

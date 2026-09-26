@@ -37,6 +37,15 @@ on:
         required: true
         default: false
         type: boolean
+      audit_images:
+        description: "Audit Amazon gallery images and require semantic visual review"
+        required: true
+        default: true
+        type: boolean
+      image_observations_path:
+        description: "Optional repository path to OCR/vision or human image-observations JSON"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -53,6 +62,8 @@ jobs:
       AMAZON_URL: ${{ inputs.amazon_url }}
       SELLER: ${{ inputs.seller }}
       USE_ERP: ${{ inputs.use_erp }}
+      AUDIT_IMAGES: ${{ inputs.audit_images }}
+      IMAGE_OBSERVATIONS_PATH: ${{ inputs.image_observations_path }}
       ERP_GRAPHQL_URL: ${{ vars.ERP_GRAPHQL_URL }}
       ERP_AUTH_TOKEN: ${{ secrets.ERP_AUTH_TOKEN }}
       ERP_ADMIN_SECRET: ${{ secrets.ERP_ADMIN_SECRET }}
@@ -87,6 +98,11 @@ jobs:
               exit 1
             fi
             args+=(--erp-graphql-url "$ERP_GRAPHQL_URL")
+          fi
+          if [[ "$AUDIT_IMAGES" != "true" ]]; then
+            args+=(--skip-image-audit)
+          elif [[ -n "$IMAGE_OBSERVATIONS_PATH" ]]; then
+            args+=(--image-observations "$IMAGE_OBSERVATIONS_PATH")
           fi
           listing-auditor "${args[@]}"
       - name: Upload human-review output
