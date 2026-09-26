@@ -14,3 +14,14 @@ def test_selects_both_completed_seller_links() -> None:
         ("JTD", "B0HBG12FK2"),
     ]
 
+
+def test_manual_input_mode() -> None:
+    records = load_records(
+        internal_id="VL-1249",
+        product_name="Dell 15 DC15250",
+        amazon_url="https://www.amazon.com/dp/B0HBDTJNJV",
+        seller="MegaPC",
+    )
+    assert [(record.sku, record.asin, record.seller) for record in records] == [
+        ("VL-1249", "B0HBDTJNJV", "MegaPC")
+    ]
