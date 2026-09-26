@@ -51,6 +51,8 @@ The adapter queries `productTableFilterable` by exact `sku` and normalizes the p
 
 The first worksheet is the action list and contains findings only. Each row is one issue, so one product can have several rows. The editable review fields are highlighted and include a status dropdown. A second worksheet preserves source evidence for the products that have findings.
 
+The report layer groups results by exact internal ID and writes one product package per `VL-XXXX` folder. Each package contains Excel, JSON, CSV, Markdown, and a dedicated source-evidence JSON file. Multiple seller listings mapped to the same internal ID remain together. An unmapped URL uses `UNMAPPED-<ASIN>` until an internal ID is supplied.
+
 GitHub Actions always uploads the Excel workbook together with machine-readable JSON/CSV and a Markdown summary, even when the audit command returns a mismatch exit code.
 
 ## Copy correction boundary

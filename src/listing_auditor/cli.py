@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from .compare import compare
 from .erp import load_erp_record
 from .evidence import collect_evidence
 from .image_audit import audit_images
-from .report import write_reports
+from .report import write_product_packages
 from .source import load_records
 
 
@@ -27,7 +28,8 @@ def _parser() -> argparse.ArgumentParser:
     audit.add_argument("--image-observations", type=Path, help="Optional slot-by-slot OCR/visual review JSON")
     audit.add_argument("--skip-image-audit", action="store_true", help="Skip image checks (not recommended for final QA)")
     audit.add_argument("--fixtures", type=Path, help="Directory with <ASIN>.json evidence files")
-    audit.add_argument("--out", type=Path, default=Path("reports"))
+    default_output = Path(os.environ.get("LISTING_CHECK_OUTPUT_ROOT", "")) if os.environ.get("LISTING_CHECK_OUTPUT_ROOT") else (Path.home() / "OneDrive" / "Desktop" / "Listing Check" if os.name == "nt" else Path("reports"))
+    audit.add_argument("--out", type=Path, default=default_output, help="Output root; each internal ID receives its own folder")
     return parser
 
 
@@ -47,10 +49,10 @@ def main() -> int:
         evidence = collect_evidence(record, args.fixtures)
         image_findings = [] if args.skip_image_audit else audit_images(record, evidence, erp, args.image_observations)
         results.append(compare(record, evidence, erp, image_findings))
-    excel_path = write_reports(results, args.out)
+    excel_paths = write_product_packages(results, args.out)
     failed = sum(result.status == "FAIL" for result in results)
     review = sum(result.status == "REVIEW" for result in results)
-    print(f"Audited {len(results)} listings: {failed} failed, {review} need review. Excel backup: {excel_path}")
+    print(f"Audited {len(results)} listings: {failed} failed, {review} need review. Product packages: {', '.join(str(path.parent) for path in excel_paths)}")
     return 2 if failed else (1 if review else 0)
 
 

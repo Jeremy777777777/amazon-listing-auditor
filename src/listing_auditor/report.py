@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import json
+import re
+from collections import defaultdict
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -148,6 +150,17 @@ def _write_excel(results: list[AuditResult], path: Path) -> None:
 def write_reports(results: list[AuditResult], out: Path) -> Path:
     out.mkdir(parents=True, exist_ok=True)
     (out / "report.json").write_text(json.dumps([r.to_dict() for r in results], indent=2, ensure_ascii=False), encoding="utf-8")
+    (out / "source-evidence.json").write_text(json.dumps([
+        {
+            "internal_id": result.listing.sku,
+            "asin": result.listing.asin,
+            "seller": result.listing.seller,
+            "amazon_url": result.listing.url,
+            "amazon_evidence": result.evidence.__dict__,
+            "erp_evidence": result.erp.__dict__ if result.erp else None,
+        }
+        for result in results
+    ], indent=2, ensure_ascii=False), encoding="utf-8")
     with (out / "report.csv").open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.writer(handle)
         writer.writerow(HEADERS)
@@ -165,3 +178,16 @@ def write_reports(results: list[AuditResult], out: Path) -> Path:
     excel_path = out / "listing-audit-review.xlsx"
     _write_excel(results, excel_path)
     return excel_path
+
+
+def _product_folder(result: AuditResult) -> str:
+    raw = result.listing.sku.strip() or f"UNMAPPED-{result.listing.asin}"
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip(".-")
+    return safe or f"UNMAPPED-{result.listing.asin}"
+
+
+def write_product_packages(results: list[AuditResult], output_root: Path) -> list[Path]:
+    grouped: dict[str, list[AuditResult]] = defaultdict(list)
+    for result in results:
+        grouped[_product_folder(result)].append(result)
+    return [write_reports(group, output_root / folder) for folder, group in sorted(grouped.items())]

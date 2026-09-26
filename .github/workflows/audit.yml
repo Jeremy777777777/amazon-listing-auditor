@@ -121,10 +121,6 @@ jobs:
         if: always()
         with:
           name: amazon-listing-audit-output
-          path: |
-            reports/listing-audit-review.xlsx
-            reports/report.json
-            reports/report.csv
-            reports/report.md
+          path: reports/**
           if-no-files-found: warn
           retention-days: 30

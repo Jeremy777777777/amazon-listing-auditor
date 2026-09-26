@@ -2,7 +2,7 @@
 
 一个独立的 Amazon listing QA workflow，用 Google Sheet、人工输入和内部 ERP 资料交叉检查已完成的 MegaPC / JTD customized listings。这个仓库只负责审核，不属于 `create-custom-pc-listing`。
 
-## v0.5 审核范围
+## v0.6 审核范围
 
 - 输入方式：Google Sheet、CSV export、人工提供内部编号（如 `VL-1249`）与产品名称，或只提供一个 Amazon URL。
 - Amazon evidence：Title、bullets、Product Description、Product information，以及 MAIN / PT01–PT08 图片 URL。
@@ -15,7 +15,17 @@
 
 ## Excel output
 
-每次运行最后生成 `reports/listing-audit-review.xlsx`。主表“问题清单”只包含有错误或有歧义的项目；已经确认无问题的 listing 不会进入主表。
+Windows 本地运行默认保存到 `C:\Users\<当前用户>\OneDrive\Desktop\Listing Check\<内部编号>\`。例如 `VL-1249` 的文件会进入 `Listing Check\VL-1249\`。主表“问题清单”只包含有错误或有歧义的项目；已经确认无问题的 listing 不会进入主表。
+
+每个产品文件夹包含：
+
+- `listing-audit-review.xlsx`
+- `report.json`
+- `report.csv`
+- `report.md`
+- `source-evidence.json`
+
+同一内部编号下的 MegaPC 和 JTD listing 会合并在同一个产品包中。URL-only 输入在尚未映射内部编号时保存到 `UNMAPPED-<ASIN>`；补充内部编号后会按 `VL-XXXX` 输出。使用 `--out` 或环境变量 `LISTING_CHECK_OUTPUT_ROOT` 可以覆盖根目录。
 
 主要字段包括：
 
@@ -75,6 +85,8 @@ listing-auditor audit \
   --out reports
 ```
 
+省略 `--out` 时，Windows 默认输出到 OneDrive Desktop 的 `Listing Check`；GitHub Actions 仍明确使用 `reports` 并上传所有内部编号子目录。
+
 URL-only 模式会用抓取到的 Amazon Title 作为 Excel 中的产品名称，并加入 `INPUT-BASELINE-001 / REVIEW`。这表示页面本身已完成审核，但由于没有内部编号和标准产品资料，尚不能确认 Amazon 产品是否与 ERP 中的具体产品完全对应。之后补充内部编号与产品名称即可执行完整 mismatch 检查。
 
 ## GitHub Actions workflow
@@ -86,7 +98,7 @@ URL-only 模式会用抓取到的 Amazon Title 作为 Excel 中的产品名称�
 3. Manual mode 填写内部编号、产品名称和 Amazon URL；URL mode 只需 Amazon URL，Seller 可选。
 4. 如启用 ERP，设置 repository variable `ERP_GRAPHQL_URL`，并通过 GitHub Secrets 提供 `ERP_AUTH_TOKEN` 或 `ERP_ADMIN_SECRET`。不要把 ERP credential 写入公开仓库。
 5. 默认开启图片审核；可在仓库中提供 `image-observations JSON` 路径完成 OCR/视觉或人工语义复核。
-6. 运行结束后下载 artifact `amazon-listing-audit-output`；其中 `listing-audit-review.xlsx` 是最终人工复核 output。
+6. 运行结束后下载 artifact `amazon-listing-audit-output`；其中按内部编号分文件夹保存 Excel 与其他审核产出。
 
 Amazon 可能返回 bot challenge。此时 workflow 会记录 `REVIEW`；production 使用时可接 approved browser/provider 或上传已授权采集的 evidence fixture。
 

@@ -6,7 +6,7 @@ from listing_auditor.compare import compare
 from listing_auditor.erp import load_erp_record
 from listing_auditor.evidence import collect_evidence
 from listing_auditor.models import AuditResult, Evidence, ListingRecord
-from listing_auditor.report import write_reports
+from listing_auditor.report import write_product_packages, write_reports
 
 
 ROOT = Path(__file__).parents[1]
@@ -49,3 +49,18 @@ def test_excel_contains_only_findings(tmp_path: Path) -> None:
     assert sheet["A8"].value == "严重程度"
     assert sheet.max_row == 8 + len(fail_result.findings)
     assert all(sheet.cell(row=row, column=5).value == "VL-1249" for row in range(9, sheet.max_row + 1))
+
+
+def test_product_package_uses_internal_id_folder(tmp_path: Path) -> None:
+    record = _record()
+    result = compare(
+        record,
+        collect_evidence(record, ROOT / "fixtures" / "listings"),
+        load_erp_record(record.sku, export_path=ROOT / "fixtures" / "erp" / "products.json"),
+    )
+    paths = write_product_packages([result], tmp_path)
+    package = tmp_path / "VL-1249"
+    assert paths == [package / "listing-audit-review.xlsx"]
+    assert {path.name for path in package.iterdir()} == {
+        "listing-audit-review.xlsx", "report.json", "report.csv", "report.md", "source-evidence.json"
+    }
