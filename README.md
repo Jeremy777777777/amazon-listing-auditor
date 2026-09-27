@@ -49,28 +49,48 @@ Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`
 
 ## 本地运行
 
-```bash
-python -m venv .venv
-python -m pip install -e ".[dev]"
-pytest
+本地可复现环境固定为 **Python 3.11**，使用独立 Conda environment；不要修改 Anaconda `base`。完整的环境检测、安装授权与 Jupyter kernel 流程见 [`docs/local-python-workflow.md`](docs/local-python-workflow.md)。
 
-listing-auditor audit \
-  --input examples/completed-listings.csv \
-  --fixtures fixtures/listings \
-  --erp-export fixtures/erp/products.json \
-  --image-observations references/image-observations.example.json \
+每次运行或调试前先执行只读预检：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/preflight-local.ps1
+```
+
+如果 Conda 不在 `PATH` 或安装在非标准目录，再显式提供路径。例如当前这台电脑：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/preflight-local.ps1 `
+  -CondaExe "E:\Coding\Scripts\conda.exe" `
+  -EnvironmentPath "E:\Coding\envs\amazon-listing-auditor-py311"
+```
+
+如果 Python、Conda、environment 或依赖缺失，必须停止审核，说明缺失项并提供官方 Python/Anaconda 下载地址；在安装、创建或修复本地环境前，必须另行取得用户明确许可。
+
+预检通过后：
+
+```powershell
+& "E:\Coding\envs\amazon-listing-auditor-py311\python.exe" -m pytest
+
+& "E:\Coding\envs\amazon-listing-auditor-py311\Scripts\listing-auditor.exe" audit `
+  --input examples/completed-listings.csv `
+  --fixtures fixtures/listings `
+  --erp-export fixtures/erp/products.json `
+  --image-observations references/image-observations.example.json `
   --out reports
 ```
 
+Jupyter Notebook/Lab 中选择 kernel **Python 3.11 (Amazon Listing Auditor)**；可运行 [`notebooks/environment-check.ipynb`](notebooks/environment-check.ipynb) 验证版本与依赖。
+
 人工输入：
 
-```bash
-listing-auditor audit \
-  --internal-id "VL-1249" \
-  --product-name "Dell 15 DC15250 / Laptop / 15.6 inch / Intel Core i7-1355U" \
-  --amazon-url "https://www.amazon.com/dp/B0HBDTJNJV" \
-  --seller "MegaPC" \
-  --erp-export fixtures/erp/products.json \
+```powershell
+& "E:\Coding\envs\amazon-listing-auditor-py311\Scripts\listing-auditor.exe" audit `
+  --internal-id "VL-1249" `
+  --product-name "Dell 15 DC15250 / Laptop / 15.6 inch / Intel Core i7-1355U" `
+  --amazon-url "https://www.amazon.com/dp/B0HBDTJNJV" `
+  --seller "MegaPC" `
+  --erp-export fixtures/erp/products.json `
   --out reports
 ```
 
@@ -93,12 +113,13 @@ URL-only 模式会用抓取到的 Amazon Title 作为 Excel 中的产品名称�
 
 在 Actions 中运行 `Audit completed listings`：
 
-1. 选择 `sheet`、`manual` 或 `url` input mode。
-2. Sheet mode 可输入 URL，或设置 repository variable `AUDIT_SHEET_URL`。
-3. Manual mode 填写内部编号、产品名称和 Amazon URL；URL mode 只需 Amazon URL，Seller 可选。
-4. 如启用 ERP，设置 repository variable `ERP_GRAPHQL_URL`，并通过 GitHub Secrets 提供 `ERP_AUTH_TOKEN` 或 `ERP_ADMIN_SECRET`。不要把 ERP credential 写入公开仓库。
-5. 默认开启图片审核；可在仓库中提供 `image-observations JSON` 路径完成 OCR/视觉或人工语义复核。
-6. 运行结束后下载 artifact `amazon-listing-audit-output`；其中按内部编号分文件夹保存 Excel 与其他审核产出。
+1. Workflow 在临时 runner 中配置 Python 3.11，安装项目并执行两次版本/依赖检查；不会使用或修改用户电脑上的 Conda 环境。
+2. 选择 `sheet`、`manual` 或 `url` input mode。
+3. Sheet mode 可输入 URL，或设置 repository variable `AUDIT_SHEET_URL`。
+4. Manual mode 填写内部编号、产品名称和 Amazon URL；URL mode 只需 Amazon URL，Seller 可选。
+5. 如启用 ERP，设置 repository variable `ERP_GRAPHQL_URL`，并通过 GitHub Secrets 提供 `ERP_AUTH_TOKEN` 或 `ERP_ADMIN_SECRET`。不要把 ERP credential 写入公开仓库。
+6. 默认开启图片审核；可在仓库中提供 `image-observations JSON` 路径完成 OCR/视觉或人工语义复核。
+7. 运行结束后下载 artifact `amazon-listing-audit-output`；其中按内部编号分文件夹保存 Excel 与其他审核产出。
 
 Amazon 可能返回 bot challenge。此时 workflow 会记录 `REVIEW`；production 使用时可接 approved browser/provider 或上传已授权采集的 evidence fixture。
 
