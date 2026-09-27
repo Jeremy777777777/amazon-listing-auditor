@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 
 from listing_auditor.compare import compare
+from listing_auditor.evidence import _AmazonParser
 from listing_auditor.models import Evidence
 from listing_auditor.source import load_records
 
@@ -42,3 +43,20 @@ def test_url_only_input_mode() -> None:
         source="test",
     ))
     assert any(finding.field == "input_baseline" for finding in result.findings)
+
+
+def test_product_description_excludes_scripts_and_unrelated_sections() -> None:
+    parser = _AmazonParser()
+    parser.feed("""
+        <span id="productTitle">MegaPC Dell 15 DC15250 Laptop</span>
+        <div id="productDescription_feature_div">
+          <script>var page = 'Dell noise Lenovo script noise';</script>
+          <div id="productDescription">Created Using Lenovo ThinkPad X1 Carbon Gen 13.</div>
+        </div>
+        <div id="detailBullets_feature_div">Brand: Dell</div>
+    """)
+    description = " ".join(parser.description_parts)
+    assert parser.title == "MegaPC Dell 15 DC15250 Laptop"
+    assert "Lenovo ThinkPad X1 Carbon Gen 13" in description
+    assert "script noise" not in description
+    assert "Brand: Dell" not in description

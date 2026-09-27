@@ -13,6 +13,12 @@
 - 文案修改建议：当 Title、Bullet Points 或 Product Description 存在问题时，按 generation 项目既有 style 输出三组可人工复核的建议文案。
 - 抓取失败或资料不足时标记为 `REVIEW`，不会误报成 `PASS`。
 
+## Cross-field identity gate
+
+`IDENTITY-CROSS-FIELD-001` 会把 Amazon Title 作为页面身份锚点，并分别与 Bullet Points、Product Description、Product information 中的产品品牌和型号系列交叉核对。该规则逐字段运行，不把整页文字合并后只取第一个品牌，因此即使没有内部编号或 ERP，像 Title 为 **Dell**、Product Description 为 **Lenovo ThinkPad** 的冲突也会单独输出为 `CRITICAL`。软件名称或一般兼容性提及不会仅凭品牌单词触发；必须存在 Created Using、Brand/Manufacturer/Model 字段、电脑产品语境或可识别的型号系列。
+
+Product Description 抓取会排除 `script`、`style`、`noscript` 和无关产品区块，防止页面脚本掩盖真正的描述内容。任何 `CRITICAL` 身份冲突都会让审核状态变为 `FAIL`，不得直接发布。
+
 ## Excel output
 
 Windows 本地运行默认保存到 `C:\Users\<当前用户>\OneDrive\Desktop\Listing Check\<内部编号>\`。例如 `VL-1249` 的文件会进入 `Listing Check\VL-1249\`。主表“问题清单”只包含有错误或有歧义的项目；已经确认无问题的 listing 不会进入主表。
@@ -45,7 +51,7 @@ Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`
 
 ## 已固化的回归案例
 
-内部编号 `VL-1249` 的产品是 Dell 15 DC15250，但 ASIN `B0HBDTJNJV` 的描述写成 Lenovo ThinkPad X1 Carbon Gen 13，同时 CPU、屏幕尺寸、分辨率与刷新率均不一致。测试要求系统必须发现身份和具体规格 mismatch，并把 warranty validity claim 送入 compliance review。
+内部编号 `VL-1249` 的产品是 Dell 15 DC15250，但 ASIN `B0HBDTJNJV` 的描述写成 Lenovo ThinkPad X1 Carbon Gen 13，同时 CPU、屏幕尺寸、分辨率与刷新率均不一致。测试要求系统在完整输入和 URL-only 两种模式下都发现这个跨字段身份冲突，并把它标记为 `IDENTITY-CROSS-FIELD-001 / CRITICAL`；warranty validity claim 仍需进入 compliance review。
 
 ## 本地运行
 
@@ -113,7 +119,7 @@ URL-only 模式会用抓取到的 Amazon Title 作为 Excel 中的产品名称�
 
 在 Actions 中运行 `Audit completed listings`：
 
-1. Workflow 在临时 runner 中配置 Python 3.11，安装项目并执行两次版本/依赖检查；不会使用或修改用户电脑上的 Conda 环境。
+1. Workflow 在临时 runner 中配置 Python 3.11，安装项目、执行两次版本/依赖检查并运行回归测试；Dell/Lenovo 跨字段案例测试不通过时，审核不会开始。它不会使用或修改用户电脑上的 Conda 环境。
 2. 选择 `sheet`、`manual` 或 `url` input mode。
 3. Sheet mode 可输入 URL，或设置 repository variable `AUDIT_SHEET_URL`。
 4. Manual mode 填写内部编号、产品名称和 Amazon URL；URL mode 只需 Amazon URL，Seller 可选。

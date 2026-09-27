@@ -8,6 +8,19 @@ from .models import AuditResult, ERPRecord, Evidence, Finding, ListingRecord
 
 
 BRANDS = ["Dell", "Lenovo", "HP", "LG", "Acer", "ASUS", "Microsoft", "Samsung", "Apple", "MegaPC"]
+SELLER_BRANDS = {"megapc", "jtd"}
+MODEL_FAMILY_BRANDS = {
+    "Lenovo": ["ThinkPad", "IdeaPad", "Yoga", "Legion"],
+    "Dell": ["Latitude", "Inspiron", "XPS", "Vostro", "Precision"],
+    "HP": ["EliteBook", "ProBook", "Pavilion", "Spectre", "Envy"],
+    "Acer": ["Aspire", "Swift"],
+    "ASUS": ["ZenBook", "VivoBook"],
+    "Microsoft": ["Surface"],
+    "Apple": ["MacBook"],
+    "Samsung": ["Galaxy Book"],
+    "LG": ["Gram"],
+}
+MODEL_FAMILIES = [family for families in MODEL_FAMILY_BRANDS.values() for family in families]
 PATTERNS = {
     "cpu": re.compile(r"(?:Intel\s+)?(?:Core\s+)?(?:Ultra\s+\d+\s+\d+[A-Z]*|i[3579]-\d{4,5}[A-Z]*)", re.I),
     "resolution": re.compile(r"\b(\d{3,4})\s*[x×]\s*(\d{3,4})\b", re.I),
@@ -37,6 +50,92 @@ def _brand(text: str) -> str:
         if re.search(rf"\b{re.escape(brand)}\b", text, re.I):
             return brand
     return ""
+
+
+def _brands(text: str) -> set[str]:
+    """Return every product manufacturer named in one evidence field."""
+    return {
+        brand for brand in BRANDS
+        if brand.casefold() not in SELLER_BRANDS and re.search(rf"\b{re.escape(brand)}\b", text, re.I)
+    }
+
+
+def _model_families(text: str) -> set[str]:
+    return {
+        family for family in MODEL_FAMILIES
+        if re.search(rf"\b{re.escape(family)}\b", text, re.I)
+    }
+
+
+def _has_product_identity_claim(text: str, brand: str) -> bool:
+    """Separate product identity from incidental software/compatibility mentions."""
+    for match in re.finditer(rf"\b{re.escape(brand)}\b", text, re.I):
+        window = text[max(0, match.start() - 100):min(len(text), match.end() + 100)]
+        if any(
+            re.search(rf"\b{re.escape(family)}\b", window, re.I)
+            for family in MODEL_FAMILY_BRANDS.get(brand, [])
+        ):
+            return True
+        if re.search(
+            rf"(?:created\s+using|built\s+(?:using|from|by)|brand\s*:|manufacturer\s*:|model(?:\s+name)?\s*:)[^.;]{{0,60}}\b{re.escape(brand)}\b|"
+            rf"\b{re.escape(brand)}\b[^.;]{{0,40}}\b(?:laptop|notebook|desktop|computer|workstation)\b",
+            window,
+            re.I,
+        ):
+            return True
+    return False
+
+
+def _cross_field_identity_findings(evidence: Evidence) -> list[Finding]:
+    """Flag Amazon fields whose OEM identity conflicts with the title."""
+    title_brand_matches = [
+        (match.start(), brand)
+        for brand in _brands(evidence.title)
+        if (match := re.search(rf"\b{re.escape(brand)}\b", evidence.title, re.I))
+    ]
+    if not title_brand_matches:
+        return []
+    expected_brand = min(title_brand_matches)[1]
+    sections = {
+        "Bullet Points": " ".join(evidence.bullets),
+        "Product Description": evidence.description,
+        "Product information": " ".join(f"{key}: {value}" for key, value in evidence.details.items()),
+    }
+    title_models = _model_families(evidence.title)
+    findings: list[Finding] = []
+    for section, text in sections.items():
+        conflicting_brands = sorted(
+            brand for brand in (_brands(text) - {expected_brand})
+            if _has_product_identity_claim(text, brand)
+        )
+        for observed_brand in conflicting_brands:
+            expected_models = ", ".join(sorted(title_models)) or "title product family/model"
+            observed_models = ", ".join(sorted(_model_families(text))) or "different manufacturer identity"
+            findings.append(Finding(
+                field=f"{section.lower().replace(' ', '_')}_identity",
+                expected=f"{expected_brand} — {expected_models}",
+                observed=f"{observed_brand} — {observed_models}",
+                severity="CRITICAL",
+                reason=f"{section} names {observed_brand}, but the Amazon title identifies the product as {expected_brand}. This is a cross-field brand/model identity conflict.",
+                evidence_source=evidence.source,
+                corrected_value=f"Replace the {observed_brand} product identity and specifications with verified {expected_brand} model information.",
+                rule_id="IDENTITY-CROSS-FIELD-001",
+                reference="README.md#cross-field-identity-gate",
+            ))
+        section_models = _model_families(text)
+        if not conflicting_brands and title_models and section_models and title_models.isdisjoint(section_models):
+            findings.append(Finding(
+                field=f"{section.lower().replace(' ', '_')}_identity",
+                expected=f"{expected_brand} — {', '.join(sorted(title_models))}",
+                observed=f"{expected_brand} — {', '.join(sorted(section_models))}",
+                severity="CRITICAL",
+                reason=f"{section} names a different product family/model than the Amazon title.",
+                evidence_source=evidence.source,
+                corrected_value="Replace the conflicting product family/model with the verified title and catalog identity.",
+                rule_id="IDENTITY-CROSS-FIELD-001",
+                reference="README.md#cross-field-identity-gate",
+            ))
+    return findings
 
 
 def _model(text: str) -> str:
@@ -121,6 +220,7 @@ def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = N
     if erp and not erp.available:
         findings.append(Finding("erp_evidence", "Matching ERP record", erp.error or "Unavailable", "REVIEW", "ERP could not confirm this internal ID.", erp.source))
 
+    findings.extend(_cross_field_identity_findings(evidence))
     findings.extend(check_compliance(record, evidence))
     findings.extend(additional_findings or [])
     findings.extend(style_correction_findings(record, evidence, erp, findings))

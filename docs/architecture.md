@@ -36,6 +36,8 @@ Conflicts remain visible instead of being collapsed into one score. Missing evid
 
 URL-only inputs receive an explicit `INPUT-BASELINE-001` review finding. They can complete page consistency, compliance and image checks, but cannot receive a full product-match confirmation until an internal ID and canonical product record are mapped.
 
+Before baseline/ERP comparison, `IDENTITY-CROSS-FIELD-001` independently compares the Title identity anchor with Bullet Points, Product Description, and Product information. A foreign OEM or conflicting recognized model family is `CRITICAL`, including in URL-only mode. Evidence remains field-separated so a correct title cannot mask an incorrect description during whole-page aggregation. Script/style/template content is excluded from Product Description evidence.
+
 ## Finding types
 
 - `CRITICAL`: wrong manufacturer or model/product family.

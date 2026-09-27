@@ -14,6 +14,8 @@ class _AmazonParser(HTMLParser):
         super().__init__()
         self._capture_depth = 0
         self._depth = 0
+        self._ignored_depth = 0
+        self._description_depth = 0
         self._in_title = False
         self._product_title_depth = 0
         self._product_title_parts: list[str] = []
@@ -33,6 +35,10 @@ class _AmazonParser(HTMLParser):
         self._depth += 1
         attr = dict(attrs)
         identity = " ".join(filter(None, [attr.get("id"), attr.get("class")]))
+        if not self._ignored_depth and tag in {"script", "style", "noscript", "template"}:
+            self._ignored_depth = self._depth
+        if not self._description_depth and re.search(r"productDescription", identity, re.I):
+            self._description_depth = self._depth
         if tag == "title":
             self._in_title = True
         if re.search(r"productTitle", identity, re.I):
@@ -88,17 +94,21 @@ class _AmazonParser(HTMLParser):
             self._row = []
         if self._capture_depth == self._depth:
             self._capture_depth = 0
+        if self._description_depth == self._depth:
+            self._description_depth = 0
+        if self._ignored_depth == self._depth:
+            self._ignored_depth = 0
         self._depth = max(0, self._depth - 1)
 
     def handle_data(self, data: str) -> None:
         clean = " ".join(data.split())
-        if not clean or not self._capture_depth:
+        if not clean or self._ignored_depth:
             return
         if self._product_title_depth:
             self._product_title_parts.append(clean)
         elif not self.title and self._in_title:
             self.title = clean
-        else:
+        elif self._description_depth:
             self.description_parts.append(clean)
         if self._bullet_depth:
             self._bullet_parts.append(clean)
