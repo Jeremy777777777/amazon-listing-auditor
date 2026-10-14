@@ -63,4 +63,8 @@ Listings with actionable text/specification findings receive separate Title, Bul
 
 ## Image audit boundary
 
-The deterministic layer checks file format, dimensions, aspect ratio, MAIN white border/framing and near-duplicates. Semantic observations cover product identity, visible ports/accessories, image text, prohibited badges or marketplace content, claims and licensed provenance. If semantic observations are unavailable, the result remains `REVIEW`; technical image checks alone cannot establish a full image pass.
+The deterministic layer checks file format, dimensions, MAIN white border/framing and near-duplicates. Semantic observations cover product identity, visible ports/accessories, image text, prohibited badges or marketplace content, claims and licensed provenance. If semantic observations are unavailable, the result remains `REVIEW`; technical image checks alone cannot establish a full image pass.
+
+## v0.8 generation alignment
+
+See [generation-sync.md](generation-sync.md) for the pinned policy, seller scopes, manual publication boundary and read-only upstream drift check. ERP is cached per exact internal ID per run; ambiguous export matches remain unavailable. Per-section CPU/display/capacity checks supplement identity checks. Images require current per-slot hashes and actual visual-review records; no square-canvas rule is applied.

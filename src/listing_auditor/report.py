@@ -124,6 +124,8 @@ def _write_excel(results: list[AuditResult], path: Path) -> None:
     evidence_sheet.append(["Internal ID", "ASIN", "Source", "Field / Section", "Value", "URL"])
     for result in (result for result in results if result.findings):
         evidence_sheet.append([result.listing.sku, result.listing.asin, result.evidence.source, "Title", result.evidence.title, result.evidence.url])
+        for index, bullet in enumerate(result.evidence.bullets, 1):
+            evidence_sheet.append([result.listing.sku, result.listing.asin, result.evidence.source, f"Bullet {index}", bullet, result.evidence.url])
         evidence_sheet.append([result.listing.sku, result.listing.asin, result.evidence.source, "Description", result.evidence.description, result.evidence.url])
         for key, value in result.evidence.details.items():
             evidence_sheet.append([result.listing.sku, result.listing.asin, result.evidence.source, key, value, result.evidence.url])

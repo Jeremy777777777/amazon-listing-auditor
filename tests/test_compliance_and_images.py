@@ -70,7 +70,6 @@ def test_image_technical_and_visual_rules(tmp_path: Path) -> None:
     assert {
         "image_gallery_count",
         "image_PT01_dimensions",
-        "image_PT01_aspect_ratio",
         "image_MAIN_overlay",
         "image_MAIN_brand",
         "image_MAIN_identity",
@@ -107,7 +106,9 @@ def test_style_aligned_copy_corrections() -> None:
     )
     findings = style_correction_findings(_record(), evidence, None, check_compliance(_record(), evidence))
     corrections = {finding.field: finding.corrected_value for finding in findings}
-    assert corrections["copy_title"].startswith("MegaPC Customized Laptop, Created Using Dell 15 DC15250")
-    assert corrections["copy_bullet_points"].startswith("1. WARRANTY:")
-    assert "**Memory & Storage, Customized by MegaPC**\\\n" in corrections["copy_product_description"]
-    assert corrections["copy_product_description"].splitlines()[-2] == "**Warranty**\\"
+    assert corrections["copy_title"].startswith("MegaPC Custom Laptop, Created Using Dell 15 DC15250")
+    assert corrections["copy_title"].endswith("Win 11 Pro")
+    assert len(corrections["copy_bullet_points"].split("\n\n")) == 5
+    assert corrections["copy_bullet_points"].startswith("MegaPC provides a 1-year limited warranty")
+    assert "<strong>Warranty and Disclosure</strong><br/>" in corrections["copy_product_description"]
+    assert corrections["copy_product_description"].endswith("The original seal has been opened solely for upgrading purposes.")

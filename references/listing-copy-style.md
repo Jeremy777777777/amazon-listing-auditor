@@ -1,22 +1,17 @@
-# Listing Copy Correction Style
+# Listing correction style — v0.8
 
-Adapted for audit corrections from:
+Adapted on 2026-10-14 from the commit and file hashes in `generation-policy-lock.json`.
 
-- https://github.com/Jeremy777777777/create-custom-pc-listing/blob/main/references/listing-style-guide.md
-- https://github.com/Jeremy777777777/create-custom-pc-listing/blob/main/references/compliance-rules.md
+## MegaPC
 
-Suggested corrections are drafts for human review, not permission to invent missing facts. The auditor uses canonical Input/ERP facts when available and prints `[[VERIFY ...]]` for unresolved required content.
+- Exact prefix `MegaPC Custom`, then product type, `Created Using` plus verified OEM model, CPU, installed base RAM/internal storage; end with `Win 11 Pro`. Target <=200 characters. Do not suggest selectable tiers, platform maximums or external storage as installed capacity.
+- Exactly five paragraphs separated by one blank line. First paragraph is the complete fixed warranty, without a heading or numbering. Remaining paragraphs cover purchase reason, platform performance, installed memory/storage, and experience/connectivity.
+- Description correction is a single literal HTML string: `<strong>` identity/headings, `<br/>` after headings, `<br/><br/>` between sections. End at the exact fixed paragraph in `Warranty and Disclosure`; no trailing breaks.
+- Fixed sold Windows 11 Pro is seller policy, distinct from factory Home; do not claim all software remains factory configured. No Office/Microsoft 365/paid Copilot entitlement is implied.
+- Verified OEM name is the only substitution in the warranty template in `src/listing_auditor/policy.py`. Preserve its wording in bullet 1, final description section and Warranty Description. Coverage, licensing and actual seal-opening remain manual publication checks.
 
-## Title
+## Evidence boundary
 
-Use this order: seller brand, `Customized`, product type, `Created Using` plus OEM model, relevant differentiator, CPU, actual RAM options, actual SSD options, and verified OS. Keep the result readable and at or below approximately 200 characters. Never present the OEM as the customized listing brand.
+Suggestions are review drafts. Conflicting Input/ERP/page facts and ambiguous capacities retain `[[VERIFY ...]]`. A placeholder is never ready to publish. ERP data is a mapped internal source, not automatic exact-SKU OEM verification. Confirm actual modifications, including soldered memory, before using copy.
 
-## Bullet points
-
-Bullet 1 is the verified warranty disclosure. Remaining bullets follow product overview/customization identity, processor, memory and storage, display or design, connectivity/expansion, and complete-use setup. Each bullet uses a short heading followed by specific facts and buyer value. Remove an unsupported theme instead of fabricating content.
-
-## Product description
-
-Start with a bold customized-product identity. Use 5–8 bold capability headings, each followed by `\` and a complete paragraph. Cover only verified product facts, distinguish factory specifications from RAM/storage changes, treat the OS as fixed rather than customized, and place `Warranty` last. Title, bullets, description, attributes, and image copy must remain consistent.
-
-No suggestion containing `[[VERIFY ...]]` is publication-ready.
+JTD retains its separate seller-brand-first correction style and unresolved warranty placeholders; MegaPC-specific catalog assertions do not apply to JTD. The stored HTML format applies to generated correction drafts, not an assumption that scraped Amazon content retains source HTML or that every channel renders it.

@@ -1,0 +1,14 @@
+{
+  "adaptedOn": "2026-10-14",
+  "repository": "Jeremy777777777/create-custom-pc-listing",
+  "commit": "ae2dc3933bd220daf1cb00e300396de27388eff9",
+  "files": {
+    "references/confirmed-catalog-defaults.md": "1c14fa597e28dbf3f8e6778a2833c523252198dce71e3d8109c2c7e0fcb36ada",
+    "references/listing-style-guide.md": "9c4933c9b1a7a19ea5c9c4e228dd1e4c11eb1ca6a59649bc1b6d45afcf781f8c",
+    "references/compliance-rules.md": "1d9dfaf32c6aa2e7e08c04881e3b29cb11c712b22089c307931b1d2dc5c7816c",
+    "references/image-spec.md": "25101e9153c4664e32a7e4c79d8cf470678d681311fca75efb56f49746bfb388",
+    "references/input-source-cross-validation.md": "d75c365f55ddfefb1519b256a011db0c8a8e065206b14d094654e20b6b650091",
+    "references/final-image-delivery-contract.md": "3d374effa79bfd7d1e53db6cdf4857a320f4747c67f4eabcba1c7a07ad8fa121",
+    "assets/warranty-disclosure-policy.json": "522318a26b3cc6280b52a5fb1b22043ab2f886b9a4fbb3b1cbb3aee056086e31"
+  }
+}
