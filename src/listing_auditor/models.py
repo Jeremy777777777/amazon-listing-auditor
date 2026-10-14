@@ -64,4 +64,11 @@ class AuditResult:
     erp: ERPRecord | None = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        from . import __version__
+        from .policy import seller_brand
+        return {**asdict(self), "audit_metadata": {
+            "auditor_version": __version__,
+            "generation_policy_commit": "ae2dc3933bd220daf1cb00e300396de27388eff9",
+            "seller_profile": seller_brand(self.listing, self.evidence) or "unresolved",
+            "publication_eligibility": "NOT_ASSESSED",
+        }}

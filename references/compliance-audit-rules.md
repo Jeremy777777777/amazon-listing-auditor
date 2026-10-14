@@ -1,31 +1,25 @@
-# Customized Computer Compliance Audit Rules
+# Listing audit rules — v0.8
 
-Adapted for audit use from the public `create-custom-pc-listing` references:
+Adapted from create-custom-pc-listing at the commit in `generation-policy-lock.json`; see `docs/generation-sync.md`. These are internal QA rules, not independently verified current Amazon policy. Publication eligibility requires applicable current account/category guidance.
 
-- https://github.com/Jeremy777777777/create-custom-pc-listing/blob/main/references/compliance-rules.md
-- https://github.com/Jeremy777777777/create-custom-pc-listing/blob/main/references/listing-style-guide.md
-
-Amazon's current policy and Seller Central controls override this repository. A `REVIEW` result requests evidence or human judgment; it is not a legal conclusion.
-
-## Automated listing rules
-
-| Rule ID | Requirement | Default severity |
+| Rule | Check | Severity |
 | --- | --- | --- |
-| `CPC-TITLE-001` | Title starts with the seller's own brand, not the OEM brand. | CRITICAL |
-| `CPC-TITLE-002` | Title contains `Custom` or `Customized`. | HIGH |
-| `CPC-TITLE-003` | OEM model is separated from seller identity using `Created Using`. | REVIEW |
-| `CPC-TITLE-004` | Title contains only the RAM tiers actually offered. | HIGH |
-| `CPC-TITLE-005` | Title contains only the storage tiers actually offered. | HIGH |
-| `CPC-TITLE-006` | Title remains at or below the internal approximately 200-character limit. | HIGH |
-| `CPC-WARRANTY-001` | Bullet point #1 is the warranty disclosure. | HIGH |
-| `CPC-WARRANTY-002` | Bullet #1 states whether OEM/original manufacturer coverage applies. | HIGH |
-| `CPC-WARRANTY-003` | Bullet #1 states the seller warranty on upgraded RAM/storage. | HIGH |
-| `CPC-SCOPE-001` | Only RAM and storage may be presented as seller customizations; software customization is prohibited. | CRITICAL |
-| `CPC-SCOPE-002` | The actual RAM/storage customization scope is documented. | HIGH |
-| `CPC-CLAIM-001` | Absolute or guaranteed claims require substantiation. | REVIEW |
+| CPC-TITLE-001–006 | Seller identity, Custom disclosure, Created Using, installed RAM/storage, <=200 characters | CRITICAL/HIGH/REVIEW |
+| CPC-WARRANTY-001–003 | Warranty first; OEM and seller coverage identified | HIGH |
+| CPC-SCOPE-001 | Explicit CPU/GPU/display/battery/software customization claims or selectable software; fixed MegaPC Pro is distinct | CRITICAL |
+| CPC-SCOPE-002 | RAM/storage scope documented | HIGH |
+| CPC-CLAIM-001 | Absolute claim requires substantiation | REVIEW |
+| CAT-TITLE-001 | MegaPC exact `MegaPC Custom ` prefix | HIGH |
+| CAT-OS-001 | MegaPC title ends with `Win 11 Pro` | HIGH |
+| CAT-BULLET-001 | MegaPC five bullets | REVIEW |
+| CAT-BASE-001 | MegaPC sold base capacities; no selectable tiers | HIGH |
+| CAT-WARRANTY-001 | Fixed paragraph at all three locations; verified OEM substituted | HIGH when contradictory; REVIEW when unavailable |
+| CAT-PUBLICATION-001 | Seller manual coverage, seal/customization, licensing and Amazon eligibility check | REVIEW |
+| IDENTITY-CROSS-FIELD-001 | Title versus each section OEM/family | CRITICAL |
+| SPEC-CROSS-FIELD-001 | Title versus all CPU/display/RAM/storage values in bullets and description | HIGH |
 
-## Required manual/source controls
+CAT rules are MegaPC-only, including seller inferred from a URL-only title. Fixed warranty is USER_CONFIRMED_CATALOG_POLICY, not OEM approval. It must not be silently rewritten, or used to infer that a specific unit was actually upgraded. Missing warranty attributes remain REVIEW. The generic title capacity checks do not prove those capacities are actually installed.
 
-The product page alone normally cannot prove that the ASIN was created through Amazon Custom, is MFN, uses a new ASIN/UPC, includes shipment documentation, or uses original/licensed copy and imagery. Keep these controls in human review until Seller Central or internal evidence is supplied.
+Keep source conflicts visible. `osScope: factory` in an ERP export explicitly identifies factory OS and excludes it from sold-OS comparison; unscoped ERP OS is not silently overridden. Product names are input clues, not complete hardware ledgers. Duplicate exact internal IDs in ERP exports are ambiguous and cannot be resolved by taking the first row.
 
-Do not silently choose between Sheet, ERP, Amazon, image text, and OEM sources. Preserve conflicts field by field and require human confirmation when the sources cannot be reconciled.
+A correct title cannot hide conflicting section values. Numeric comparison is conservative and may require human clarification of factory/platform context. It is not a complete natural-language fact verifier. Model-family recognition and CPU patterns have finite coverage. No automatic FCC, license, serial or account eligibility assertion is made.

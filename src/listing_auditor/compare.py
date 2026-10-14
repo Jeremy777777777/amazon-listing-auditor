@@ -26,9 +26,9 @@ PATTERNS = {
     "resolution": re.compile(r"\b(\d{3,4})\s*[x×]\s*(\d{3,4})\b", re.I),
     "display_size": re.compile(r"\b(\d{2}(?:\.\d)?)\s*[-–]?\s*(?:inch|inches|\")", re.I),
     "refresh_rate": re.compile(r"\b(\d{2,3})\s*Hz\b", re.I),
-    "memory": re.compile(r"\b(\d{1,3})\s*GB\s*(?:LPDDR\w*|DDR\w*|RAM|Memory)?", re.I),
+    "memory": re.compile(r"\b(\d{1,3})\s*GB\s*(?:LPDDR\w*|DDR\w*|RAM|Memory)\b", re.I),
     "storage": re.compile(r"\b(\d+(?:\.\d+)?)\s*(TB|GB)\s*(?:SSD|NVMe|M\.2|HDD)", re.I),
-    "os": re.compile(r"\bWindows\s+1[01]\s+(?:Pro|Home)\b", re.I),
+    "os": re.compile(r"\b(?:Windows|Win)\s+1[01]\s+(?:Pro|Home)\b", re.I),
 }
 BOOLEAN_TERMS = {
     "touchscreen": r"\btouch(?:screen|able)?\b",
@@ -164,6 +164,7 @@ def _facts(text: str) -> dict[str, str]:
 
 def _norm(value: str) -> str:
     value = value.casefold().replace("×", "x")
+    value = re.sub(r"\bwin\b", "windows", value)
     return re.sub(r"[^a-z0-9]+", "", value)
 
 
@@ -173,6 +174,10 @@ def _erp_facts(erp: ERPRecord | None) -> dict[str, str]:
     facts: dict[str, str] = {}
     for field, key in ERP_KEYS.items():
         raw = erp.fields.get(key, "")
+        if field == "os" and erp.fields.get("osScope", "").casefold() == "factory":
+            continue
+        if field == "memory" and re.fullmatch(r"\d{1,3}\s*GB", raw, re.I):
+            raw += " RAM"
         if field in PATTERNS and raw:
             facts[field] = _first(PATTERNS[field], raw)
         elif field in BOOLEAN_TERMS and raw.casefold() in {"true", "yes", "1", "supported"}:
@@ -221,9 +226,31 @@ def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = N
         findings.append(Finding("erp_evidence", "Matching ERP record", erp.error or "Unavailable", "REVIEW", "ERP could not confirm this internal ID.", erp.source))
 
     findings.extend(_cross_field_identity_findings(evidence))
+    findings.extend(_cross_field_spec_findings(evidence))
     findings.extend(check_compliance(record, evidence))
     findings.extend(additional_findings or [])
     findings.extend(style_correction_findings(record, evidence, erp, findings))
 
     status = "FAIL" if any(f.severity in {"CRITICAL", "HIGH"} for f in findings) else ("REVIEW" if findings else "PASS")
     return AuditResult(record, status, findings, evidence, erp)
+
+
+def _cross_field_spec_findings(evidence: Evidence) -> list[Finding]:
+    """Check each field, so correct title values cannot hide incorrect copy."""
+    findings = []
+    for field in ("cpu", "resolution", "display_size", "refresh_rate", "memory", "storage"):
+        pattern = PATTERNS[field]
+        expected = _first(pattern, evidence.title)
+        if not expected:
+            continue
+        for section, text in [("bullet_points", " ".join(evidence.bullets)), ("product_description", evidence.description)]:
+            values = {_first(pattern, match.group(0)) for match in pattern.finditer(text)}
+            conflicts = sorted(value for value in values if _norm(value) != _norm(expected))
+            if conflicts:
+                findings.append(Finding(
+                    f"{section}_{field}", expected, ", ".join(conflicts), "HIGH",
+                    "This field conflicts with the title; verify installed base versus factory/platform scope before editing.",
+                    evidence.source, corrected_value="MANUAL REVIEW", rule_id="SPEC-CROSS-FIELD-001",
+                    reference="references/compliance-audit-rules.md",
+                ))
+    return findings

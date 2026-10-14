@@ -108,7 +108,7 @@ jobs:
             args+=(--sheet-url "$sheet_url")
           fi
           if [[ "$USE_ERP" == "true" ]]; then
-            if [[ -z "$INTERNAL_ID" ]]; then
+            if [[ "$INPUT_MODE" == "url" && -z "$INTERNAL_ID" ]]; then
               echo "ERP cross-check requires an internal_id; URL-only mode will still audit the page without ERP." >&2
               exit 1
             fi

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import io
+import hashlib
 import json
 import re
 import urllib.request
 from pathlib import Path
 from typing import Any
+from itertools import combinations
 
 from PIL import Image, ImageChops
 
@@ -36,7 +38,8 @@ def _download(url_or_path: str) -> bytes:
 
 
 def _average_hash(image: Image.Image) -> int:
-    pixels = list(image.convert("L").resize((8, 8)).getdata())
+    thumbnail = image.convert("L").resize((8, 8))
+    pixels = [thumbnail.getpixel((x, y)) for y in range(8) for x in range(8)]
     average = sum(pixels) / len(pixels)
     value = 0
     for pixel in pixels:
@@ -68,7 +71,7 @@ def _subject_extent(image: Image.Image) -> float:
 
 def _expected_brand(record: ListingRecord) -> str:
     match = re.match(r"\s*([A-Za-z][A-Za-z -]+?)\s+(?=\w*[0-9]|ThinkPad|Latitude|EliteBook|Gram|Yoga|ROG|Victus)", record.product_name)
-    return match.group(1).strip() if match else record.product_name.split()[0]
+    return match.group(1).strip() if match else (record.product_name.split()[0] if record.product_name.split() else "")
 
 
 def _load_observations(path: Path | None, record: ListingRecord) -> list[dict[str, Any]]:
@@ -111,21 +114,24 @@ def audit_images(
         ))
 
     hashes: list[tuple[int, str]] = []
+    file_hashes: dict[str, str] = {}
     for index, source in enumerate(urls):
         slot = "MAIN" if index == 0 else f"PT{index:02d}"
         try:
-            with Image.open(io.BytesIO(_download(source))) as image:
+            data = _download(source)
+            file_hashes[slot] = hashlib.sha256(data).hexdigest()
+            with Image.open(io.BytesIO(data)) as image:
                 width, height = image.size
                 image_format = (image.format or "").upper()
                 if image_format not in SUPPORTED_FORMATS:
                     findings.append(_finding("IMG-TECH-001", f"image_{slot}_format", "JPEG, PNG, TIFF, or non-animated GIF", image_format or "Unknown", "HIGH", "Unsupported image format.", source, "Export the image using a supported format."))
+                if getattr(image, "is_animated", False):
+                    findings.append(_finding("IMG-TECH-005", f"image_{slot}_animation", "Static image", "Animated image", "HIGH", "Animated GIF is outside the supported static formats.", source, "Export a static original."))
                 longest = max(width, height)
                 if longest < 500 or longest > 10000:
                     findings.append(_finding("IMG-TECH-002", f"image_{slot}_dimensions", "Longest side 500-10,000 px", f"{width}x{height}", "HIGH", "Image dimensions are outside Amazon's technical range.", source, "Replace with a correctly sized original; do not upscale a small source."))
                 elif longest < 1000:
                     findings.append(_finding("IMG-TECH-003", f"image_{slot}_zoom", "At least 1,000 px on longest side", f"{width}x{height}", "REVIEW", "The image may not enable Amazon zoom.", source, "Use an original image at least 1,000 px on the longest side."))
-                if abs(width - height) / max(width, height) > 0.02:
-                    findings.append(_finding("IMG-TECH-004", f"image_{slot}_aspect_ratio", "1:1 internal gallery standard", f"{width}x{height}", "REVIEW", "The image is not square and may not match the internal gallery standard.", source, "Review composition and export a square version without distorting the product."))
                 if slot == "MAIN":
                     border_ratio = _white_border_ratio(image)
                     if border_ratio < 0.92:
@@ -144,6 +150,8 @@ def audit_images(
 
     try:
         observations = _load_observations(observations_path, record)
+        if not isinstance(observations, list) or any(not isinstance(item, dict) for item in observations):
+            raise TypeError("images must be an array of observation objects")
     except (OSError, json.JSONDecodeError, AttributeError, TypeError) as exc:
         findings.append(_finding(
             "IMG-EVIDENCE-002", "image_visual_observations", "Readable image-observations JSON",
@@ -160,21 +168,44 @@ def audit_images(
         return findings
 
     expected_brand = _expected_brand(record)
+    if not expected_brand:
+        from .policy import oem_brand
+        expected_brand = oem_brand(evidence.title)
+    actual_slots = {"MAIN" if i == 0 else f"PT{i:02d}" for i in range(len(urls))}
+    reviewed_slots = {str(item.get("slot", "")) for item in observations}
+    for slot in sorted(actual_slots - reviewed_slots):
+        findings.append(_finding("IMG-VISUAL-002", f"image_{slot}_review_missing", "Current slot-specific visual review", "Missing", "REVIEW", "An observation for another slot does not cover this image.", evidence.source, "Review this slot and record its current SHA-256."))
     expected_corpus = " ".join([record.product_name, *list((erp.fields if erp and erp.available else {}).values())]).casefold()
+    primary_facts: dict[str, set[str]] = {}
     for index, observation in enumerate(observations):
         slot = str(observation.get("slot") or ("MAIN" if index == 0 else f"PT{index:02d}"))
         source = str(observation.get("url") or f"visual observation: {slot}")
-        if slot == "MAIN" and (observation.get("main_has_overlay") or str(observation.get("ocr_text", "")).strip()):
+        if slot not in actual_slots or not observation.get("sha256") or observation.get("sha256") != file_hashes.get(slot):
+            findings.append(_finding("IMG-EVIDENCE-003", f"image_{slot}_review_hash", "Review bound to current image SHA-256", str(observation.get("sha256") or "Missing"), "REVIEW", "Unbound, stale or unknown-slot evidence cannot establish current visual PASS; recorded problems are retained for review.", source, "Review the current file and bind the observation to its SHA-256."))
+        if observation.get("visual_review_100pct") is not True or observation.get("visual_review_200px") is not True:
+            findings.append(_finding("IMG-VISUAL-003", f"image_{slot}_visual_completion", "Actual 100% and 200px visual review", "Incomplete", "REVIEW", "Hash matching alone does not demonstrate completed visual inspection.", source, "Inspect current image at full size and thumbnail size; record both reviews."))
+        if slot.startswith("PT") and slot in actual_slots:
+            fact_ids = observation.get("primary_fact_ids")
+            if isinstance(fact_ids, list) and fact_ids and all(isinstance(value, str) and value.strip() for value in fact_ids):
+                primary_facts[slot] = set(fact_ids)
+            else:
+                findings.append(_finding("IMG-SEMANTIC-001", f"image_{slot}_fact_mapping", "Canonical primary fact IDs with manual semantic review", "Missing or empty", "REVIEW", "No numeric overlap can be computed without reviewed nonempty canonical fact IDs.", source, "Map equivalent claims to the same canonical fact ID; exclude only identity/model/navigation labels."))
+        if slot == "MAIN" and observation.get("main_has_overlay"):
             findings.append(_finding("IMG-MAIN-003", "image_MAIN_overlay", "No added text, graphics, badges, watermarks, or logo overlay", str(observation.get("ocr_text") or "Overlay detected"), "HIGH", "The MAIN image contains a prohibited overlay.", source, "Remove all added overlays from MAIN."))
         detected_brand = str(observation.get("detected_brand", "")).strip()
-        if detected_brand and expected_brand.casefold() not in detected_brand.casefold():
+        if detected_brand and expected_brand and expected_brand.casefold() not in detected_brand.casefold():
             findings.append(_finding("IMG-IDENTITY-001", f"image_{slot}_brand", expected_brand, detected_brand, "CRITICAL", "The image appears to show a different OEM brand than the expected product.", source, "Replace with imagery of the exact verified base product."))
         identity = str(observation.get("product_identity", "")).strip()
-        if identity and identity.casefold() not in expected_corpus:
+        if identity and expected_corpus.strip() and identity.casefold() not in expected_corpus:
             findings.append(_finding("IMG-IDENTITY-002", f"image_{slot}_identity", record.product_name, identity, "CRITICAL", "The observed product identity is not supported by the input or ERP record.", source, "Replace the image or correct the product mapping after manual verification."))
         for flag, label in PROHIBITED_FLAGS.items():
             if observation.get(flag):
                 findings.append(_finding("IMG-CONTENT-001", f"image_{slot}_{flag}", f"No {label}", label, "HIGH", "The gallery image contains prohibited promotional or marketplace content.", source, "Remove the prohibited content and regenerate the image from licensed assets."))
+        for flag, message in {"contains_peripherals": "Computer-only imagery; no additional devices/accessories", "hardware_mismatch": "Exact-model chassis, keyboard and connectors", "factory_marks_removed": "Preserve authentic factory marks"}.items():
+            if observation.get(flag):
+                findings.append(_finding("IMG-PRODUCT-001", f"image_{slot}_{flag}", message, "Visual mismatch reported", "HIGH", "Current catalog image requirements are not satisfied.", source, message))
+        if slot == "PT08" and observation.get("physical_port_map_verified") is not True:
+            findings.append(_finding("IMG-PORTS-001", "image_PT08_port_map", "Verified physical connector views and exact labels", "Not verified", "REVIEW", "Generic connectivity icons do not establish a physical port map.", source, "Check actual model sides/front/back and connector types/counts."))
         claims = observation.get("claims") or {}
         if isinstance(claims, dict):
             for field, value in claims.items():
@@ -183,4 +214,8 @@ def audit_images(
                     findings.append(_finding("IMG-CLAIM-001", f"image_{slot}_{field}", "Claim supported by input/ERP evidence", value_text, "HIGH", "Image text contains a specification not supported by the mapped product evidence.", source, "Correct or remove the unsupported image claim."))
         if not observation.get("licensed_provenance"):
             findings.append(_finding("IMG-RIGHTS-001", f"image_{slot}_provenance", "Documented licensed asset provenance", "Missing", "REVIEW", "Commercial-use rights cannot be confirmed from the observation record.", source, "Record authorized OEM media, seller-owned photography, or original infographic provenance."))
+    for (left, a), (right, b) in combinations(primary_facts.items(), 2):
+        overlap = len(a & b) / min(len(a), len(b))
+        if overlap > 0.20:
+            findings.append(_finding("IMG-SEMANTIC-002", f"image_{left}_{right}_overlap", "Primary fact overlap at or below 20%", f"{overlap:.1%}: {', '.join(sorted(a & b))}", "REVIEW", "Canonical facts repeat across PT slots; this metric depends on the supplied manual mapping.", evidence.source, "Reallocate repeated primary facts to their owning slot."))
     return findings

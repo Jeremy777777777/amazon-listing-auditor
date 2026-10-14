@@ -2,14 +2,24 @@
 
 一个独立的 Amazon listing QA workflow，用 Google Sheet、人工输入和内部 ERP 资料交叉检查已完成的 MegaPC / JTD customized listings。这个仓库只负责审核，不属于 `create-custom-pc-listing`。
 
-## v0.6 审核范围
+## v0.8 同步与优化
+
+已适配生成项目 2026-10-14 的版本，来源 commit / 七份规则文件哈希见 `references/generation-policy-lock.json`；更新范围与后续检查方法见 [同步说明](docs/generation-sync.md)。
+
+- MegaPC 固定基础配置：`MegaPC Custom … Win 11 Pro`、五条 bullet、三个位置一致的保修原文；修改建议使用 HTML 描述。JTD 保留独立政策。
+- 逐字段检查描述和 bullet 的规格冲突；输入/ERP 冲突保留 VERIFY。
+- 图片取消正方形规则；逐 slot 检查 SHA-256、覆盖与 100%/200px 人工复核记录，加入物理端口图与语义重复检查。
+- 同一内部编号复用 ERP 查询，修复 Sheet 模式 ERP 开关；Source Evidence 增加完整 bullet。
+- OEM / Amazon 发布资格保留人工 REVIEW，与卖家政策分开。
+
+## 审核范围
 
 - 输入方式：Google Sheet、CSV export、人工提供内部编号（如 `VL-1249`）与产品名称，或只提供一个 Amazon URL。
 - Amazon evidence：Title、bullets、Product Description、Product information，以及 MAIN / PT01–PT08 图片 URL。
 - ERP cross-check：通过内部编号查询 ERP GraphQL；本地也支持 ERP CSV / JSON export。
 - 规格检查：品牌/型号上下文不对应、CPU/显示/内存/储存/OS/功能规格冲突，以及 ERP 与输入冲突。
 - Compliance 检查：seller-brand-first、Customized / Created Using、RAM/储存、第一条 warranty、只允许 RAM/储存 customization、绝对化 claim 等规则。
-- 图片检查：格式、尺寸、zoom、正方形、MAIN 白底与构图、重复图；再结合 OCR/视觉或人工 observation 检查错误 OEM/型号、图片 claims、价格/评价/Amazon 标识、联系方式、端口/配件、素材授权等。
+- 图片检查：格式、尺寸、zoom、MAIN 白底与构图、重复图与逐图证据；再结合 OCR/视觉或人工 observation 检查错误 OEM/型号、图片 claims、价格/评价/Amazon 标识、联系方式、端口/配件、素材授权等。
 - 文案修改建议：当 Title、Bullet Points 或 Product Description 存在问题时，按 generation 项目既有 style 输出三组可人工复核的建议文案。
 - 抓取失败或资料不足时标记为 `REVIEW`，不会误报成 `PASS`。
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import re
+from html import escape
 
 from .models import ERPRecord, Evidence, Finding, ListingRecord
+from .policy import seller_brand, oem_brand, warranty
 
 
 REFERENCE = "references/listing-copy-style.md"
-SELLER_BRANDS = {"megapc": "MegaPC", "jtd": "J-Tech Digital"}
 
 
 def _value(fields: dict[str, str], *keys: str) -> str:
@@ -14,14 +15,7 @@ def _value(fields: dict[str, str], *keys: str) -> str:
 
 
 def _seller_brand(record: ListingRecord, evidence: Evidence) -> str:
-    mapped = SELLER_BRANDS.get(record.seller.casefold())
-    if mapped:
-        return mapped
-    if evidence.title.casefold().startswith("megapc"):
-        return "MegaPC"
-    if evidence.title.casefold().startswith(("j-tech digital", "jtd")):
-        return "J-Tech Digital"
-    return "[[VERIFY SELLER BRAND]]"
+    return seller_brand(record, evidence) or "[[VERIFY SELLER BRAND]]"
 
 
 def _canonical(record: ListingRecord, erp: ERPRecord | None) -> dict[str, str]:
@@ -55,13 +49,18 @@ def _canonical(record: ListingRecord, erp: ERPRecord | None) -> dict[str, str]:
     }
 
 
-def _warranty(brand: str) -> str:
+def _warranty(brand: str, model: str = "") -> str:
     if brand == "MegaPC":
-        return "WARRANTY: The original manufacturer warranty remains valid on factory components. MegaPC provides a 1-year limited warranty on upgraded RAM and SSD components."
+        return warranty(oem_brand(model))
     return f"WARRANTY: [[VERIFY OEM WARRANTY STATUS]]. {brand} provides [[VERIFY SELLER WARRANTY TERM AND COVERAGE]] for upgraded RAM and SSD components."
 
 
 def _title(brand: str, facts: dict[str, str]) -> str:
+    if brand == "MegaPC":
+        candidate = f"MegaPC Custom {facts['type']}, Created Using {facts['model']}, {facts['cpu']}, {facts['ram']}, {facts['storage']}, Win 11 Pro"
+        if len(candidate) > 200:
+            candidate = f"MegaPC Custom {facts['type']}, Created Using {facts['model']}, {facts['ram']}, {facts['storage']}, Win 11 Pro"
+        return candidate
     required = [
         f"{brand} Customized {facts['type']}",
         f"Created Using {facts['model']}",
@@ -77,6 +76,14 @@ def _title(brand: str, facts: dict[str, str]) -> str:
 
 
 def _bullets(brand: str, facts: dict[str, str]) -> str:
+    if brand == "MegaPC":
+        return "\n\n".join([
+            _warranty(brand, facts["model"]),
+            f"Built for Your Workflow — Created Using {facts['model']}, this {facts['type']} offers {facts['screen']}. [[VERIFY PRACTICAL BENEFIT]].",
+            f"Performance Platform — {facts['cpu']}. " + (f"Graphics: {facts['graphics']}. " if facts['graphics'] else "") + "[[VERIFY APPROPRIATE WORKLOADS]].",
+            f"Installed Memory & Storage — {facts['ram']} memory and {facts['storage']} internal storage. [[VERIFY ACTUAL RAM/STORAGE MODIFICATIONS; DO NOT CLAIM SOLDERED RAM UPGRADES]]. Other hardware remains factory configured.",
+            f"Everyday Experience — {facts['connectivity']}. Fixed Windows 11 Pro sold configuration; no Office, Microsoft 365 or paid Copilot entitlement is implied.",
+        ])
     bullets = [
         _warranty(brand),
         f"CUSTOMIZED PRODUCT OVERVIEW: Created using {facts['model']}, this {facts['type']} is customized by {brand} only for the selected RAM and storage configuration; other hardware and software remain factory configured.",
@@ -90,6 +97,17 @@ def _bullets(brand: str, facts: dict[str, str]) -> str:
 
 
 def _description(brand: str, facts: dict[str, str]) -> str:
+    if brand == "MegaPC":
+        sections = [
+            ("Display and Design", facts["screen"]),
+            ("Processor and Graphics", " / ".join(v for v in [facts["cpu"], facts["graphics"]] if v)),
+            ("Memory and Storage", f"Installed memory: {facts['ram']}. Internal storage: {facts['storage']}. [[VERIFY ACTUAL RAM/STORAGE MODIFICATIONS]]. Other hardware remains factory configured."),
+            ("Experience and Connectivity", facts["connectivity"]),
+            ("Windows 11 Pro", "Fixed seller Windows 11 Pro configuration; no Office, Microsoft 365 or paid Copilot entitlement is implied."),
+            ("Warranty and Disclosure", _warranty(brand, facts["model"])),
+        ]
+        identity = escape(f"MegaPC Custom {facts['type']} — Created Using {facts['model']}")
+        return "<strong>" + identity + "</strong><br/><br/>" + "<br/><br/>".join(f"<strong>{escape(heading)}</strong><br/>{escape(body)}" for heading, body in sections)
     sections = [
         f"**{brand} Customized {facts['type']} — Created Using {facts['model']}**",
         f"**Display or Design**\\\n{facts['screen']} supports [[VERIFY DISPLAY OR DESIGN BENEFIT]].",
@@ -117,6 +135,18 @@ def style_correction_findings(record: ListingRecord, evidence: Evidence, erp: ER
         return []
     brand = _seller_brand(record, evidence)
     facts = _canonical(record, erp)
+    # Unresolved input/ERP conflicts must not become confident corrections.
+    conflict_keys = {"memory": "ram", "storage": "storage", "cpu": "cpu", "model": "model", "brand": "model", "display_size": "screen", "resolution": "screen", "refresh_rate": "screen"}
+    for finding in existing:
+        if finding.corrected_value == "MANUAL REVIEW":
+            key = finding.field
+            for prefix in ("product_description_", "bullet_points_"):
+                key = key.removeprefix(prefix)
+            if key in conflict_keys:
+                facts[conflict_keys[key]] = f"[[VERIFY CONFLICTING {key.upper()}]]"
+    for key in ("ram", "storage"):
+        if re.search(r"\b(?:up to|choose|options?)\b|\d\s*(?:GB|TB)?\s*[/–-]\s*\d", facts[key], re.I):
+            facts[key] = f"[[VERIFY INSTALLED BASE {key.upper()}]]"
     shared = dict(severity="REVIEW", evidence_source=REFERENCE, reference=REFERENCE)
     return [
         Finding("copy_title", "Seller-brand-first style-compliant title using verified facts", evidence.title, reason="Suggested title follows the existing customized-PC title order; every VERIFY placeholder must be resolved before use.", corrected_value=_title(brand, facts), rule_id="STYLE-TITLE-001", **shared),

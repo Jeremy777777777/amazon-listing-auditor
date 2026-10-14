@@ -10,6 +10,7 @@ from .evidence import collect_evidence
 from .image_audit import audit_images
 from .report import write_product_packages
 from .source import load_records
+from .models import Finding
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -44,10 +45,17 @@ def main() -> int:
         seller=args.seller,
     )
     results = []
+    erp_cache = {}
     for record in records:
-        erp = load_erp_record(record.sku, export_path=args.erp_export, graphql_url=args.erp_graphql_url) if record.sku and (args.erp_export or args.erp_graphql_url) else None
+        erp = None
+        if record.sku and (args.erp_export or args.erp_graphql_url):
+            if record.sku not in erp_cache:
+                erp_cache[record.sku] = load_erp_record(record.sku, export_path=args.erp_export, graphql_url=args.erp_graphql_url)
+            erp = erp_cache[record.sku]
         evidence = collect_evidence(record, args.fixtures)
         image_findings = [] if args.skip_image_audit else audit_images(record, evidence, erp, args.image_observations)
+        if args.skip_image_audit:
+            image_findings.append(Finding("image_audit_skipped", "Image review completed", "Skipped by command option", "REVIEW", "Text-only audit cannot establish complete image QA.", rule_id="IMG-SKIPPED-001", reference="references/image-audit-rules.md"))
         results.append(compare(record, evidence, erp, image_findings))
     excel_paths = write_product_packages(results, args.out)
     failed = sum(result.status == "FAIL" for result in results)

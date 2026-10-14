@@ -7,4 +7,5 @@ reports/
 reports*/
 .artifact_work/
 .env
+.test-tmp*/
 

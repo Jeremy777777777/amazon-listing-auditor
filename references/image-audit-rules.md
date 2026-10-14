@@ -1,36 +1,27 @@
-# Product Image Audit Rules
+# Image audit rules — v0.8
 
-Adapted for audit use from:
+Pinned source: `generation-policy-lock.json`. Pixel and supplied observation checks are separate from actual human inspection and channel eligibility.
 
-- https://github.com/Jeremy777777777/create-custom-pc-listing/blob/main/references/image-spec.md
-- https://github.com/Jeremy777777777/create-custom-pc-listing/blob/main/references/amazon-product-image-workflow.md
-
-The auditor separates deterministic file/pixel checks from semantic visual review. Pixel checks must not claim that an image shows the correct product, ports, accessories, claims, or licensed source.
-
-## Deterministic checks
-
-| Rule ID | Requirement |
+| Rule | Check |
 | --- | --- |
-| `IMG-GALLERY-001/002` | Capture the gallery; internal standard is `MAIN` plus `PT01`–`PT08`. |
-| `IMG-TECH-001` | JPEG, TIFF, PNG, or non-animated GIF. |
-| `IMG-TECH-002` | Longest side is 500–10,000 px. |
-| `IMG-TECH-003` | At least 1,000 px on the longest side for zoom. |
-| `IMG-TECH-004` | Internal production gallery uses a 1:1 square canvas. |
-| `IMG-MAIN-001` | MAIN uses a pure-white background. |
-| `IMG-MAIN-002` | Complete product fills approximately 85% of MAIN without cropping. |
-| `IMG-GALLERY-003` | Gallery slots are not near-duplicates. |
+| IMG-GALLERY-001/002 | Live gallery MAIN + PT01–PT08 coverage; review missing slots |
+| IMG-TECH-001/002/003/005 | Supported static formats; longest edge 500–10,000; below 1,000 is zoom REVIEW; no animation |
+| IMG-MAIN-001/002 | White-border and subject-extent heuristics; require visual confirmation |
+| IMG-MAIN-003 | Explicit reported added overlay; OCR alone can be authentic chassis text |
+| IMG-GALLERY-003 | Perceptual near-duplicate heuristic |
+| IMG-VISUAL-001/002/003 | Observations present, each captured slot covered, actual 100% and 200px reviews recorded |
+| IMG-EVIDENCE-003 | Observation SHA-256 matches current downloaded bytes and slot exists |
+| IMG-IDENTITY/CLAIM/CONTENT/RIGHTS | Product identity, mapped claims, promotional flags, asset provenance |
+| IMG-PRODUCT-001 | Reported peripherals, geometry mismatch or removal of authentic factory marks |
+| IMG-PORTS-001 | PT08 physical connector views/types/counts verified |
+| IMG-SEMANTIC-001/002 | Canonical primary fact IDs; overlap >20% requires review |
 
-## Semantic visual checks
+Square shape and fixed 2000px output are retired. Do not resize merely to satisfy historical settings. The live gallery has nine publication slots; the generation project's two enhanced MAIN candidates are additional production assets, not two required live Amazon images. Enhanced MAIN eligibility remains separate.
 
-`image-observations.json` supplies OCR/vision or human observations grouped under `listings.<ASIN>.images`. The auditor also accepts a single-listing top-level `images` array. The auditor checks:
+Observations are scoped under `listings.<ASIN>.images`; legacy single-listing input remains readable. Each record uses explicit `slot`, `sha256`, `visual_review_100pct`, `visual_review_200px`, observed flags, exact-model identity, claims and licensed provenance. Hashes bind bytes, not truthfulness: only record actual manual reviews. Missing/stale records stay REVIEW; reported problems are retained for inspection. `physical_port_map_verified` is required for PT08.
 
-- MAIN has no added text, graphics, border, badge, watermark, or logo overlay.
-- Image OEM and product identity match the mapped input/ERP product.
-- Image text claims are supported by the mapped product evidence.
-- No reviews, star ratings, testimonials, prices, coupons, shipping claims, Amazon/Prime/Alexa marks, Amazon badges, or seller contact information.
-- Ports and included accessories are shown only when verified for the exact shipped configuration.
-- Images do not mix another size, color, generation, chassis, or model.
-- Asset provenance documents authorized OEM media, seller-owned photography, or original infographics using licensed assets.
-- Photorealistic people generated entirely by AI carry the required production metadata when applicable.
+PT observations provide nonempty `primary_fact_ids`, based on manual semantic review. Equivalent claims share one ID. Exclude only OEM/model/navigation labels. Pairwise overlap is intersection size divided by the smaller fact count. Empty/unavailable mappings get REVIEW and no invented percentage. Repetition is a review item, not automatic image rejection.
 
-When no semantic observations are supplied, the auditor emits `IMG-VISUAL-001` as `REVIEW`; technical success alone is not a full image PASS.
+Generation slot ownership: PT01 purchase reason; PT02 use scene; PT03 sole full base configuration; PT04 display/form; PT05 task flow; PT06 input details on white; PT07 unused verified value without warranty/service advertising; PT08 physical port map/connectivity. Review ownership manually; the auditor does not infer it from OCR. Computer-only imagery includes no extra devices/accessories. Authorized faithful AI reproduction is allowed only with exact-model fidelity evidence, genuine factory marks and rights; AI use alone is not a failure or a PASS.
+
+Remaining manual controls include schema-3 logo asset/master/final hashes and actual visible bounds, style lock, native clarity, DPI metadata, faithful keyboard/ports, synthetic performer metadata, slot ownership, and applicable marketplace rules. A basic observation record does not establish production full-gallery QA, remote delivery or Amazon acceptance.

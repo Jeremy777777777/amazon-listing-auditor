@@ -56,10 +56,15 @@ def _from_export(internal_id: str, path: Path) -> ERPRecord:
     else:
         with path.open(encoding="utf-8-sig", newline="") as handle:
             rows = list(csv.DictReader(handle))
+    matches = []
     for row in rows:
         fields = _flatten(row)
         if fields.get("sku", "").casefold() == internal_id.casefold() or fields.get("internal_id", "").casefold() == internal_id.casefold():
-            return ERPRecord(internal_id, fields, f"ERP export: {path.name}", True)
+            matches.append(fields)
+    if len(matches) > 1:
+        return ERPRecord(internal_id, source=f"ERP export: {path.name}", error="Multiple ERP products matched this internal ID")
+    if matches:
+        return ERPRecord(internal_id, matches[0], f"ERP export: {path.name}", True)
     return ERPRecord(internal_id, source=f"ERP export: {path.name}", error="Internal ID not found in ERP export")
 
 
