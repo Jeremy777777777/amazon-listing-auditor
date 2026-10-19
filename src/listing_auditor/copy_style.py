@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from html import escape
 
 from .models import ERPRecord, Evidence, Finding, ListingRecord
 
@@ -92,20 +93,26 @@ def _bullets(brand: str, facts: dict[str, str]) -> str:
 
 
 def _description(brand: str, facts: dict[str, str]) -> str:
+    def paragraph(heading: str, body: str = "") -> str:
+        content = f"<strong>{escape(heading)}</strong>"
+        if body:
+            content += f"<br>\n{escape(body)}"
+        return f"<p>{content}</p>"
+
     sections = [
-        f"**{brand} Customized {facts['type']} — Created Using {facts['model']}**",
-        f"**Display or Design**\\\n{facts['screen']} supports [[VERIFY DISPLAY OR DESIGN BENEFIT]].",
-        f"**Processor & Performance**\\\nPowered by {facts['cpu']}, this system is suited to [[VERIFY APPROPRIATE WORKLOADS]].",
+        paragraph(f"{brand} Customized {facts['type']} — Created Using {facts['model']}"),
+        paragraph("Display or Design", f"{facts['screen']} supports [[VERIFY DISPLAY OR DESIGN BENEFIT]]."),
+        paragraph("Processor & Performance", f"Powered by {facts['cpu']}, this system is suited to [[VERIFY APPROPRIATE WORKLOADS]]."),
     ]
     if facts["graphics"]:
-        sections.append(f"**Graphics Platform**\\\n{facts['graphics']} supports [[VERIFY MANUFACTURER-SUPPORTED GRAPHICS CAPABILITIES AND USE CASES]].")
+        sections.append(paragraph("Graphics Platform", f"{facts['graphics']} supports [[VERIFY MANUFACTURER-SUPPORTED GRAPHICS CAPABILITIES AND USE CASES]]."))
     sections.extend([
-        f"**Memory & Storage, Customized by {brand}**\\\nAvailable memory: {facts['ram']}. Available storage: {facts['storage']}. {brand} changes only the selected RAM and storage; other hardware and software remain factory configured.",
-        f"**Connectivity & System Features**\\\n{facts['connectivity']} supports [[VERIFY CONNECTIVITY USE CASES]]. Included accessories: [[VERIFY INCLUDED ACCESSORIES]].",
-        f"**{facts['os']}**\\\nThe operating system is preinstalled as a fixed system specification for [[VERIFY SUITABLE USE CASES]] and is not a {brand} software customization.",
-        f"**Warranty**\\\n{_warranty(brand)}",
+        paragraph(f"Memory & Storage, Customized by {brand}", f"Available memory: {facts['ram']}. Available storage: {facts['storage']}. {brand} changes only the selected RAM and storage; other hardware and software remain factory configured."),
+        paragraph("Connectivity & System Features", f"{facts['connectivity']} supports [[VERIFY CONNECTIVITY USE CASES]]. Included accessories: [[VERIFY INCLUDED ACCESSORIES]]."),
+        paragraph(facts['os'], f"The operating system is preinstalled as a fixed system specification for [[VERIFY SUITABLE USE CASES]] and is not a {brand} software customization."),
+        paragraph("Warranty", _warranty(brand)),
     ])
-    return "\n".join(sections)
+    return "\n\n".join(sections)
 
 
 def style_correction_findings(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None, existing: list[Finding]) -> list[Finding]:
@@ -123,5 +130,5 @@ def style_correction_findings(record: ListingRecord, evidence: Evidence, erp: ER
     return [
         Finding("copy_title", "Seller-brand-first style-compliant title using verified facts", evidence.title, reason="Suggested title follows the existing customized-PC title order; every VERIFY placeholder must be resolved before use.", corrected_value=_title(brand, facts), rule_id="STYLE-TITLE-001", **shared),
         Finding("copy_bullet_points", "Warranty-first themed bullet set using verified facts", "\n".join(evidence.bullets) or "No readable bullets", reason="Suggested bullets follow the existing warranty-first and product-theme sequence; they are not publish-ready while VERIFY placeholders remain.", corrected_value=_bullets(brand, facts), rule_id="STYLE-BULLET-001", **shared),
-        Finding("copy_product_description", "Sectioned Markdown description using verified facts", evidence.description or "No readable description", reason="Suggested description follows the existing sectioned style and keeps Warranty last; it must be fact-checked before publication.", corrected_value=_description(brand, facts), rule_id="STYLE-DESC-001", **shared),
+        Finding("copy_product_description", "HTML description with p paragraphs, strong headings and br line breaks", evidence.description or "No readable description", reason="Suggested description uses literal HTML: <p> for paragraphs, <strong> for headings and <br> before body text, with Warranty last. VERIFY placeholders require review before publication.", corrected_value=_description(brand, facts), rule_id="STYLE-DESC-001", **shared),
     ]

@@ -59,6 +59,8 @@ v0.8 使用 `create-custom-pc-listing` 的真实 [Excel 模板](https://github.c
 
 Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 映射到 Item Name、Bullet Point、Product Description 的推荐修改行。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。本版本迁移审核展示和导出流程；versioned audit rule pack 与生产项目的规则同步是单独的工作，不把模板更新当作所有规则已同步。
 
+Product Description 推荐内容固定保存为 HTML：`<p><strong>开头身份</strong></p>`，后续每节使用 `<p><strong>标题</strong><br>正文</p>`。文字中的 `&`、双引号等进行 HTML 转义。Excel 单元格保存完整 HTML 文本，供复制到支持 HTML 的描述编辑器；不再输出 Markdown 加粗或反斜杠分行。原始 Amazon Value 和 evidence 不会被建议格式覆盖。
+
 ## 已固化的回归案例
 
 内部编号 `VL-1249` 的产品是 Dell 15 DC15250，但 ASIN `B0HBDTJNJV` 的描述写成 Lenovo ThinkPad X1 Carbon Gen 13，同时 CPU、屏幕尺寸、分辨率与刷新率均不一致。测试要求系统在完整输入和 URL-only 两种模式下都发现这个跨字段身份冲突，并把它标记为 `IDENTITY-CROSS-FIELD-001 / CRITICAL`；warranty validity claim 仍需进入 compliance review。

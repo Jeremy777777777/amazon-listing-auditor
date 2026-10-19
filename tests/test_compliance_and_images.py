@@ -109,5 +109,24 @@ def test_style_aligned_copy_corrections() -> None:
     corrections = {finding.field: finding.corrected_value for finding in findings}
     assert corrections["copy_title"].startswith("MegaPC Customized Laptop, Created Using Dell 15 DC15250")
     assert corrections["copy_bullet_points"].startswith("1. WARRANTY:")
-    assert "**Memory & Storage, Customized by MegaPC**\\\n" in corrections["copy_product_description"]
-    assert corrections["copy_product_description"].splitlines()[-2] == "**Warranty**\\"
+    description = corrections["copy_product_description"]
+    assert "<p><strong>Memory &amp; Storage, Customized by MegaPC</strong><br>\n" in description
+    assert description.split("\n\n")[-1].startswith("<p><strong>Warranty</strong><br>\n")
+    assert description.endswith("</p>")
+    assert "**" not in description and "\\" not in description
+
+
+def test_description_escapes_text_and_preserves_paragraph_structure():
+    from html import unescape
+    from listing_auditor.copy_style import _canonical, _description
+
+    facts = _canonical(_record(), None)
+    facts["screen"] = '23.8" FHD <panel> & display'
+    description = _description("MegaPC", facts)
+    paragraphs = description.split("\n\n")
+    assert all(p.startswith("<p><strong>") and p.endswith("</p>") for p in paragraphs)
+    assert "<br>" not in paragraphs[0]
+    assert all("</strong><br>\n" in p for p in paragraphs[1:])
+    assert '23.8&quot; FHD &lt;panel&gt; &amp; display' in description
+    assert facts["screen"] in unescape(description)
+    assert "[[VERIFY RAM OPTIONS]]" in description

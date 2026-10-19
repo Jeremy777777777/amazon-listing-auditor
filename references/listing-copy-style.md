@@ -17,6 +17,8 @@ Bullet 1 is the verified warranty disclosure. Remaining bullets follow product o
 
 ## Product description
 
-Start with a bold customized-product identity. Use 5–8 bold capability headings, each followed by `\` and a complete paragraph. Cover only verified product facts, distinguish factory specifications from RAM/storage changes, treat the OS as fixed rather than customized, and place `Warranty` last. Title, bullets, description, attributes, and image copy must remain consistent.
+User-confirmed output format (2026-10-19): save literal HTML text in the Product Description recommendation cell. Wrap the opening identity in `<p><strong>...</strong></p>`. Wrap every following section in `<p><strong>Heading</strong><br>Body</p>`, separating HTML paragraphs with a blank line for readability. Do not output Markdown `**`, heading backslashes, or plain newlines as a substitute for HTML tags. Excel stores the HTML as text; a compatible HTML renderer applies the bold headings and paragraph/line breaks.
+
+Escape text content using HTML entities (`&amp;`, `&quot;`, `&lt;`, `&gt;`) without escaping the generated structural tags or treating source text as markup. Use 5–8 capability headings, cover only verified product facts, distinguish factory specifications from RAM/storage changes, treat the OS as fixed rather than customized, and place `Warranty` last. Title, bullets, description, attributes, and image copy must remain consistent. This is a formatting change, not authorization to invent or verify missing product facts. Captured Amazon content remains unchanged in the original Value/source cells; the recommendation row contains the generated HTML.
 
 No suggestion containing `[[VERIFY ...]]` is publication-ready.
