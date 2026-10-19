@@ -5,6 +5,7 @@ import re
 from .compliance import check_compliance
 from .copy_style import style_correction_findings
 from .models import AuditResult, ERPRecord, Evidence, Finding, ListingRecord
+from .customization import options
 
 
 BRANDS = ["Dell", "Lenovo", "HP", "LG", "Acer", "ASUS", "Microsoft", "Samsung", "Apple", "MegaPC"]
@@ -164,6 +165,7 @@ def _facts(text: str) -> dict[str, str]:
 
 def _norm(value: str) -> str:
     value = value.casefold().replace("×", "x")
+    value = re.sub(r"\bcore\s+(?=i[3579]-)", "", value)
     return re.sub(r"[^a-z0-9]+", "", value)
 
 
@@ -203,6 +205,11 @@ def compare(record: ListingRecord, evidence: Evidence, erp: ERPRecord | None = N
         return AuditResult(record, status, findings, evidence, erp)
 
     expected, observed, erp_facts = _facts(record.product_name), _facts(evidence.text), _erp_facts(erp)
+    # Offered choices in title/copy are not a single installed factory/base value.
+    # The compliance layer checks those choices against the captured controls;
+    # keep Input-vs-ERP baseline conflicts independently visible below.
+    if options(evidence, 'ram'): observed['memory'] = ''
+    if options(evidence, 'storage'): observed['storage'] = ''
     expected["model"] = _model(record.product_name)
     observed["model"] = expected["model"] if re.search(re.escape(expected["model"]), evidence.text, re.I) else evidence.title
     fields = ["brand", "model", "cpu", "resolution", "display_size", "refresh_rate", "memory", "storage", "os", *BOOLEAN_TERMS]

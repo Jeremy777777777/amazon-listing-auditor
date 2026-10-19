@@ -25,4 +25,5 @@ def warranty(oem: str) -> str:
 
 
 def has_capacity_options(text: str) -> bool:
-    return bool(re.search(r"\b\d+(?:\.\d+)?\s*(?:GB|TB)?\s*/\s*\d+(?:\.\d+)?\s*(?:(?:GB|TB)|/)", text, re.I))
+    from .customization import option_groups
+    return bool(option_groups(text))

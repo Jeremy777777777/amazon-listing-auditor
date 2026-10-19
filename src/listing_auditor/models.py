@@ -25,6 +25,7 @@ class Evidence:
     captured_at: str = ""
     available: bool = True
     error: str = ""
+    customization: dict = field(default_factory=dict)
 
     @property
     def text(self) -> str:

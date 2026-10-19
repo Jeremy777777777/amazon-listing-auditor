@@ -26,6 +26,7 @@ def _parser() -> argparse.ArgumentParser:
     audit.add_argument("--erp-export", type=Path, help="ERP CSV or JSON export (safe fallback when API auth is unavailable)")
     audit.add_argument("--erp-graphql-url", help="Authenticated ERP GraphQL endpoint")
     audit.add_argument("--image-observations", type=Path, help="Optional slot-by-slot OCR/visual review JSON")
+    audit.add_argument("--customization-evidence", type=Path, help="ASIN-scoped observed Customize options, units and source JSON")
     audit.add_argument("--skip-image-audit", action="store_true", help="Skip image checks (not recommended for final QA)")
     audit.add_argument("--fixtures", type=Path, help="Directory with <ASIN>.json evidence files")
     default_output = Path(os.environ.get("LISTING_CHECK_OUTPUT_ROOT", "")) if os.environ.get("LISTING_CHECK_OUTPUT_ROOT") else (Path.home() / "OneDrive" / "Desktop" / "Listing Check" if os.name == "nt" else Path("reports"))
@@ -46,7 +47,7 @@ def main() -> int:
     results = []
     for record in records:
         erp = load_erp_record(record.sku, export_path=args.erp_export, graphql_url=args.erp_graphql_url) if record.sku and (args.erp_export or args.erp_graphql_url) else None
-        evidence = collect_evidence(record, args.fixtures)
+        evidence = collect_evidence(record, args.fixtures, args.customization_evidence)
         image_findings = [] if args.skip_image_audit else audit_images(record, evidence, erp, args.image_observations)
         results.append(compare(record, evidence, erp, image_findings))
     excel_paths = write_product_packages(results, args.out)

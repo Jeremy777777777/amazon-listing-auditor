@@ -14,14 +14,14 @@ Amazon's current policy and Seller Central controls override this repository. A 
 | `CPC-TITLE-001` | Title starts with the seller's own brand, not the OEM brand. | CRITICAL |
 | `CPC-TITLE-002` | Title contains `Custom` or `Customized`. | HIGH |
 | `CPC-TITLE-003` | OEM model is separated from seller identity using `Created Using`. | REVIEW |
-| `CPC-TITLE-004` | Title states verified installed base RAM, not selectable tiers. | HIGH |
-| `CPC-TITLE-005` | Title states verified installed base internal storage, not selectable tiers. | HIGH |
+| `CPC-TITLE-004` | Title states confirmed base RAM or actual observed Customize RAM choices. | HIGH |
+| `CPC-TITLE-005` | Title states confirmed base internal storage or actual observed Customize storage choices. | HIGH |
 | `CPC-TITLE-006` | Title remains at or below the internal approximately 200-character limit. | HIGH |
 | `CPC-WARRANTY-001` | Bullet point #1 is the warranty disclosure. | HIGH |
 | `CPC-WARRANTY-002` | Bullet #1 states whether OEM/original manufacturer coverage applies. | HIGH |
 | `CPC-WARRANTY-003` | Bullet #1 states the seller warranty on upgraded RAM/storage. | HIGH |
 | `CPC-TITLE-007/008` | MegaPC title starts exactly `MegaPC Custom ` and ends `Win 11 Pro`. | HIGH |
-| `CPC-BASE-001` | Title, bullets and description describe one base configuration, not capacity option lists. | HIGH |
+| `CPC-BASE-001` | Capacity lists match dated ASIN-scoped Customize controls and units. Unsupported lists conflict; missing option evidence remains REVIEW. Factory/base and offered choices stay distinct. | HIGH / REVIEW |
 | `CPC-WARRANTY-004/005/006` | Bullet 1, final Description Warranty and Disclosure, and Warranty Description use the identical fixed catalog paragraph. Missing attribute capture stays REVIEW. | HIGH / REVIEW |
 | `STYLE-BULLET-002` | Default copy has five bullet paragraphs, warranty first. | REVIEW |
 | `CPC-SCOPE-001` | Hardware changes are limited to RAM/storage; Windows 11 Pro is the fixed seller-confirmed sold OS. Negated statements are not positive modification claims. | CRITICAL |

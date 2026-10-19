@@ -124,11 +124,12 @@ def test_description_escapes_text_and_preserves_paragraph_structure():
 
     facts = _canonical(_record(), None)
     facts["screen"] = '23.8" FHD <panel> & display'
+    facts["model"] = 'Dell 23.8" FHD <panel> & display'
     description = _description("MegaPC", facts)
     paragraphs = description.split("\n\n")
     assert all(p.startswith("<p><strong>") and p.endswith("</p>") for p in paragraphs)
     assert "<br>" not in paragraphs[0]
     assert all("</strong><br>\n" in p for p in paragraphs[1:])
     assert '23.8&quot; FHD &lt;panel&gt; &amp; display' in description
-    assert facts["screen"] in unescape(description)
-    assert "[[VERIFY BASE RAM]]" in description
+    assert facts["model"] in unescape(description)
+    assert "[[VERIFY" not in description

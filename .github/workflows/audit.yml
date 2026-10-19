@@ -47,6 +47,10 @@ on:
         description: "Optional repository path to OCR/vision or human image-observations JSON"
         required: false
         type: string
+      customization_evidence_path:
+        description: "Optional ASIN-scoped observed Customize choices and units JSON"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -65,6 +69,7 @@ jobs:
       USE_ERP: ${{ inputs.use_erp }}
       AUDIT_IMAGES: ${{ inputs.audit_images }}
       IMAGE_OBSERVATIONS_PATH: ${{ inputs.image_observations_path }}
+      CUSTOMIZATION_EVIDENCE_PATH: ${{ inputs.customization_evidence_path }}
       ERP_GRAPHQL_URL: ${{ vars.ERP_GRAPHQL_URL }}
       ERP_AUTH_TOKEN: ${{ secrets.ERP_AUTH_TOKEN }}
       ERP_ADMIN_SECRET: ${{ secrets.ERP_ADMIN_SECRET }}
@@ -122,6 +127,9 @@ jobs:
             args+=(--skip-image-audit)
           elif [[ -n "$IMAGE_OBSERVATIONS_PATH" ]]; then
             args+=(--image-observations "$IMAGE_OBSERVATIONS_PATH")
+          fi
+          if [[ -n "$CUSTOMIZATION_EVIDENCE_PATH" ]]; then
+            args+=(--customization-evidence "$CUSTOMIZATION_EVIDENCE_PATH")
           fi
           listing-auditor "${args[@]}"
       - name: Upload human-review output

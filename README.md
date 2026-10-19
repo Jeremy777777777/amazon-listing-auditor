@@ -2,7 +2,7 @@
 
 一个独立的 Amazon listing QA workflow，用 Google Sheet、人工输入和内部 ERP 资料交叉检查已完成的 MegaPC / JTD customized listings。这个仓库只负责审核，不属于 `create-custom-pc-listing`。
 
-## v0.6 审核范围
+## 审核范围
 
 - 输入方式：Google Sheet、CSV export、人工提供内部编号（如 `VL-1249`）与产品名称，或只提供一个 Amazon URL。
 - Amazon evidence：Title、bullets、Product Description、Product information，以及 MAIN / PT01–PT08 图片 URL。
@@ -25,7 +25,8 @@ Windows 本地运行默认保存到 `C:\Users\<当前用户>\OneDrive\Desktop\Li
 
 v0.8 使用 `create-custom-pc-listing` 的真实 [Excel 模板](https://github.com/Jeremy777777777/create-custom-pc-listing/blob/e2910c8fa93370105d53bcb49d3fc17f12b0ee1a/assets/listing-workbook-template.xlsx)，不再以 19 列问题清单作为 Excel 主视图。模板固定随安装包发布，无需在审核时联网下载；来源版本见 `src/listing_auditor/assets/template-provenance.json`。
 
-- 首页 `审核修改` 按字段并排显示 **Amazon 原内容（红色） / 推荐修改（浅绿色） / 问题说明**，点击位置可跳到模板单元格。长文案分段展示，完整原文和建议保留在模板中。一个字段涉及多条规则时合并显示；待人工填写的审核状态和最终备注为黄色。
+- 首页 `可复制文案` 的 **B 列**直接保存完整标题、五条 Bullet 和 HTML Description；每项一个单元格，不拆段，不含 `[[VERIFY ...]]`。选中对应单元格复制即可。来源和待核实事项单独放在 C 列及审核表，不混进客户文案。
+- `审核修改` 按字段并排显示 **Amazon 原内容（红色） / 推荐修改（浅绿色） / 问题说明**，点击位置可跳到模板单元格。此阅读表允许长文案分段；复制完整成稿请用首页 B 列或原模板第 6 行。一个字段涉及多条规则时合并显示；人工状态和最终备注为黄色。
 - 保留 `Product Details`、`Offer`、`Safety&Compliance` 的所有原始字段名及 Definition。第 3 行 Value 填 Amazon 原文，存在问题的单元格标红；第 4 行为审核状态，第 5 行为来源，第 6 行新增推荐修改，第 7 行新增问题说明及 Rule ID。**不覆盖原内容为推荐值**。
 - `NOT_CAPTURED` 表示没有取得页面证据；`CAPTURED_NOT_FLAGGED` 仅表示已抓到且没有触发当前规则，不是验证通过；`ISSUE_REVIEW` 表示有问题或需要人工复核。不能从公开页面取得的 Offer / 合规字段保持空值，不补造。
 - 图片问题放在 `图片审核`；`Source Evidence` 保留原始 Title、每条 Bullet、Description、属性、图片 URL、输入与 ERP 状态。无法映射到模板的规则仍留在首页，不会消失。
@@ -57,9 +58,13 @@ v0.8 使用 `create-custom-pc-listing` 的真实 [Excel 模板](https://github.c
 
 `Source Evidence` 保存 Amazon 与 ERP 的字段级 evidence，便于后续人工复查。
 
-Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 映射到 Item Name、Bullet Point、Product Description 的推荐修改行。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。
+Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 映射到 Item Name、Bullet Point、Product Description 的推荐修改行。成稿使用已映射的 Input/ERP 基础事实和实际 Customize 控件证据。未确认的可选功能或容量数字直接省略，缺失事项记在独立 COPY-SOURCE 审核项中；客户文案不含占位符。核心型号/OEM/卖家保修政策未映射时不生成假成稿。
 
-v0.9 按用户要求同步 listing 创建项目的当前文案政策：`MegaPC Custom`、单一基础售卖配置、固定 Windows 11 Pro、五段 Bullet，以及 Bullet 1 / Description 最后的 Warranty and Disclosure / Warranty Description 完全相同的保修全文（含原封条已打开说明）。不再推荐 RAM/SSD 可选档位，也不再声明所有软件保持出厂状态。来源版本和边界见 [文案规则](references/listing-copy-style.md)；图片规则包不属于本次文案同步。可复制的 VA-215 HTML 示例见 [examples/VA-215-product-description.html](examples/VA-215-product-description.html)。
+v0.10 根据用户的后续明确要求，审核成稿以 **实际基础硬件 + listing 实际 Customize 可售升级容量** 编写，取代之前仅写单一基础容量的限制。继续统一 `MegaPC Custom`、固定 Windows 11 Pro、五段 Bullet，以及三处完全相同的完整保修段落（含原封条打开说明）；不再声明所有软件保持出厂状态。来源和优先级见 [文案规则](references/listing-copy-style.md)。图片规则包不属于本次文案同步。
+
+VA-215 实际 Customize 控件于 2026-10-19 核实为 **16GB/32GB/64GB RAM**、**0.5TB/1TB/2TB/4TB SSD**；0.5TB 不改写成 512GB，页面另列的 8GB 不当作可购买档位。示例 [HTML](examples/VA-215-product-description.html) 与 [容量证据](examples/VA-215-customization.json) 保留在仓库；证据是带时间的快照，后续运行须核实是否仍适用，不能当作永久实时状态。
+
+可用 `--customization-evidence <json-path>` 导入已授权浏览器采集的控件证据，也可在 `<ASIN>.json` fixture 的 `customization` 字段提供。结构包括 `asin`、布尔 `available`、`source`、`captured_at`、`options.ram` 与 `options.storage` 的带单位字符串数组；多 ASIN 文件使用 `listings.<ASIN>`。ASIN 不匹配、单位缺失或状态不明确时不采用容量。单纯的标题/描述容量、平台最大容量、没有单位的 `0.5,1,2,4` 属性都不能代替真实控件证据。`base`、`selected`、`options` 分开保留；未选择的控件不代表默认/出厂配置。Actions 提供 `customization_evidence_path` 输入。
 
 Product Description 推荐内容固定保存为 HTML：`<p><strong>开头身份</strong></p>`，后续每节使用 `<p><strong>标题</strong><br>正文</p>`。文字中的 `&`、双引号等进行 HTML 转义。Excel 单元格保存完整 HTML 文本，供复制到支持 HTML 的描述编辑器；不再输出 Markdown 加粗或反斜杠分行。原始 Amazon Value 和 evidence 不会被建议格式覆盖。
 

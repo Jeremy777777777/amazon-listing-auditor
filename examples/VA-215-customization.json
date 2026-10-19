@@ -1,0 +1,28 @@
+{
+  "asin": "B0H9V9BKXS",
+  "available": true,
+  "source": "Amazon live Customize dialog; human-visible radio option labels",
+  "url": "https://www.amazon.com/dp/B0H9V9BKXS",
+  "captured_at": "2026-10-19T20:29:13.511Z",
+  "options": {
+    "ram": [
+      "16GB",
+      "32GB",
+      "64GB"
+    ],
+    "storage": [
+      "0.5TB",
+      "1TB",
+      "2TB",
+      "4TB"
+    ]
+  },
+  "base": {},
+  "selected": {},
+  "notes": [
+    "No option was selected during inspection.",
+    "The product-information RAM attribute says 8 GB; it is not a purchasable choice in this Customize dialog.",
+    "The first storage label is exactly 0.5 TB, not 512 GB.",
+    "OEM factory RAM/storage were not independently verified; dialog options must not be treated as factory-installed values."
+  ]
+}

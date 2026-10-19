@@ -19,3 +19,23 @@ Before running or debugging this project on a user's computer:
 6. GitHub-hosted runners are ephemeral: the Actions workflow may install its
    declared Python version and dependencies without changing the user's local
    machine.
+
+# Copy-ready audit workflow
+
+For paste-ready listing corrections, follow `references/listing-copy-style.md`.
+Read actual RAM/storage choices from the listing's Customize controls using an
+authorized browser/provider, preserving ASIN, timestamp and units. Pass the
+structured capture with `--customization-evidence`; title text, platform maxima
+and unitless summary tables are not substitutes. Keep original/factory facts,
+page attributes, purchasable options and selected values separate. Do not infer
+a default or factory configuration from an unselected/first option.
+
+Finished title, five bullets and HTML description must not contain VERIFY/TODO
+placeholders or editorial instructions. Put unknown optional facts and missing
+sources in audit notes; withhold copy if core identity/warranty is unmapped.
+Export complete strings into the first sheet `可复制文案`, column B, and the
+matching template recommendation cells. Never split the copyable value into
+continuation rows. Preserve original captured content separately. Rebuild the
+requested product's example after changing copy generation, verify no unresolved
+markers or wrong option units remain, then deliver the reviewed workbook and
+upload the authorized workflow changes.

@@ -5,6 +5,7 @@ import re
 import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
+from dataclasses import replace
 
 from .models import Evidence, ListingRecord
 
@@ -127,10 +128,25 @@ def _from_fixture(path: Path) -> Evidence:
         image_urls=[str(value) for value in data.get("images", [])],
         source=data.get("source", f"fixture:{path.name}"),
         captured_at=data.get("captured_at", ""),
+        customization=data.get("customization", {}),
     )
 
 
-def collect_evidence(record: ListingRecord, fixtures: Path | None = None) -> Evidence:
+def collect_evidence(record: ListingRecord, fixtures: Path | None = None, customization_path: Path | None = None) -> Evidence:
+    evidence = _collect_page(record, fixtures)
+    if customization_path:
+        try:
+            payload = json.loads(customization_path.read_text(encoding="utf-8-sig"))
+            scoped = payload.get("listings", {}).get(record.asin) if "listings" in payload else payload
+            if not isinstance(scoped, dict) or scoped.get("asin") != record.asin:
+                raise ValueError("Customization evidence must explicitly match this ASIN")
+            evidence = replace(evidence, customization=scoped)
+        except (OSError, ValueError, AttributeError, TypeError) as exc:
+            evidence = replace(evidence, customization={"available": False, "error": str(exc)})
+    return evidence
+
+
+def _collect_page(record: ListingRecord, fixtures: Path | None = None) -> Evidence:
     fixture = fixtures / f"{record.asin}.json" if fixtures else None
     if fixture and fixture.exists():
         return _from_fixture(fixture)

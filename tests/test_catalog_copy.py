@@ -52,7 +52,7 @@ def test_missing_conflicting_and_option_capacities_are_not_invented():
     assert missing['storage'] == '[[VERIFY BASE INTERNAL STORAGE]]'
     assert missing['os'] == 'Windows 11 Pro'
     unknown_oem = _canonical(record('Unknown computer / All-in-One'), None)
-    assert '[[VERIFY OEM BRAND]]' in _description('MegaPC', unknown_oem)
+    assert _description('MegaPC', unknown_oem) == ''
 
 
 def test_copy_checks_find_capacity_lists_and_warranty_drift_without_negation_false_positive():
@@ -68,7 +68,8 @@ def test_copy_checks_find_capacity_lists_and_warranty_drift_without_negation_fal
 def test_va215_copyable_example_has_no_optional_or_unverified_specs():
     example = (Path(__file__).parents[1]/'examples/VA-215-product-description.html').read_text(encoding='utf-8').strip()
     assert '[[VERIFY' not in example
-    assert 'options:' not in example.casefold()
+    assert '0.5TB' in example and '4TB' in example
+    assert '512GB' not in example and '256GB' not in example
     assert 'IR webcam' not in example and 'Wi-Fi 6E' not in example
     assert example.startswith('<p><strong>MegaPC Custom ')
     assert unescape(example).endswith(warranty('Dell')+'</p>')

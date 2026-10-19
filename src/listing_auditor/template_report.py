@@ -7,12 +7,14 @@ from copy import copy
 from importlib.resources import files
 from io import BytesIO
 from pathlib import Path
+import json
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from .models import AuditResult, Finding
+from .customization import options
 
 
 TEMPLATE_SHEETS = ("Product Details", "Offer", "Safety&Compliance")
@@ -145,7 +147,7 @@ def _recommendation(findings: list[Finding], field: str) -> str:
     copy_field = {"Item Name": "copy_title", "Bullet Point": "copy_bullet_points", "Product Description": "copy_product_description"}.get(field)
     # A full proposed copy block takes precedence over many short edit instructions.
     draft = next((f.corrected_value for f in findings if f.field == copy_field and f.corrected_value), None)
-    if draft: return draft
+    if draft: return '' if '[[VERIFY' in draft else draft
     if field == "Warranty Description":
         exact = next((f.corrected_value for f in findings if f.rule_id == "CPC-WARRANTY-006" and f.corrected_value), None)
         if exact: return exact
@@ -222,12 +224,25 @@ def write_template_workbook(results: list[AuditResult], path: Path) -> None:
     template_bytes = files("listing_auditor").joinpath("assets/listing-workbook-template.xlsx").read_bytes()
     workbook = load_workbook(BytesIO(template_bytes))
     review = workbook.create_sheet("审核修改", 0)
+    copy_sheet = workbook.create_sheet("可复制文案", 0)
+    copy_sheet.append(["字段 / ASIN", "完整成稿：复制此单元格即可粘贴", "来源及审核备注（不要复制到 listing）"])
     image_review = workbook.create_sheet("图片审核")
     evidence_sheet = workbook.create_sheet("Source Evidence")
     evidence_sheet.append(["Internal ID", "ASIN / Seller", "Source", "Field / Section", "Value", "URL"])
     review_rows, image_rows = [], []
     image_links = {}
     for index, result in enumerate(results):
+        for finding in result.findings:
+            if finding.field in {'copy_title','copy_bullet_points','copy_product_description'} and finding.corrected_value:
+                if '[[VERIFY' in finding.corrected_value:
+                    continue  # never promote a legacy draft into the copy-ready view
+                name = {'copy_title':'Item Name','copy_bullet_points':'Bullet Point（五条完整段落）','copy_product_description':'Product Description（HTML）'}[finding.field]
+                proof = ''
+                if options(result.evidence,'ram') or options(result.evidence,'storage'):
+                    proof = f"容量依据：{result.evidence.customization.get('source')}\n{result.evidence.customization.get('captured_at')}\n"
+                _append_literals(copy_sheet,[f'{result.listing.asin}\n{name}',finding.corrected_value,proof+finding.reason])
+        exact_warranty = next((f.corrected_value for f in result.findings if f.rule_id == 'CPC-WARRANTY-006' and f.corrected_value and '[[VERIFY' not in f.corrected_value),None)
+        if exact_warranty: _append_literals(copy_sheet,[f'{result.listing.asin}\nWarranty Description',exact_warranty,'与 Bullet 1 和 Description 最后的 Warranty and Disclosure 保持一致。'])
         # Preserve one complete template per listing, including several ASINs for one internal ID.
         if index == 0:
             sheets = [workbook[name] for name in TEMPLATE_SHEETS]
@@ -296,6 +311,8 @@ def write_template_workbook(results: list[AuditResult], path: Path) -> None:
         entries += [(f"Description {i}", value) for i, value in enumerate(result.evidence.description.split("\n\n"), 1)]
         entries += list(result.evidence.details.items())
         entries += [("MAIN" if i == 0 else f"PT{i:02d}", url) for i, url in enumerate(result.evidence.image_urls)]
+        if result.evidence.customization:
+            entries.append(('Observed Customize evidence', json.dumps(result.evidence.customization,ensure_ascii=False)))
         for field, value in entries:
             source = "User input" if field in {"Input product", "Internal ID"} else ("Audit" if field == "Audit status" else result.evidence.source)
             _append_literals(evidence_sheet, [result.listing.sku, label, source, field, None, result.listing.url])
@@ -305,6 +322,12 @@ def write_template_workbook(results: list[AuditResult], path: Path) -> None:
                 _append_literals(evidence_sheet, [result.listing.sku, label, result.erp.source, field, None, ""])
                 _literal(evidence_sheet.cell(evidence_sheet.max_row, 5), value)
     _write_review_rows(review, review_rows)
+    _format_table(copy_sheet,[32,115,65])
+    for r in range(2, copy_sheet.max_row+1):
+        copy_sheet.cell(r,2).fill = PatternFill('solid',fgColor=GREEN)
+    copy_sheet.freeze_panes='B2'
+    if copy_sheet.max_row == 1:
+        _append_literals(copy_sheet,['暂无可复制成稿','','先补齐核心身份及保修依据；此表不输出占位符草稿。'])
     _write_review_rows(image_review, image_rows)
     for r in range(2, image_review.max_row + 1):
         key = (image_review.cell(r, 1).value, str(image_review.cell(r, 2).value or "").split("\n内容续页", 1)[0])

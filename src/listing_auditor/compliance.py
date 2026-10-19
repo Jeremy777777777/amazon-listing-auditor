@@ -4,7 +4,8 @@ import re
 from html import unescape
 
 from .models import Evidence, Finding, ListingRecord
-from .catalog_policy import has_capacity_options, identify_oem, warranty
+from .catalog_policy import identify_oem, warranty
+from .customization import capacity_values, option_groups, options
 
 
 REFERENCE = "references/compliance-audit-rules.md"
@@ -38,9 +39,9 @@ def check_compliance(record: ListingRecord, evidence: Evidence) -> list[Finding]
     if not re.search(r"\bcreated\s+using\b", title, re.I):
         findings.append(_finding("CPC-TITLE-003", "compliance_title_oem_reference", "Created Using [OEM model]", title, "REVIEW", "The title does not clearly separate the seller brand from the OEM base model.", source, "Use a seller-brand-first title and identify the base model with Created Using."))
     if not re.search(r"\b\d{1,3}\s*GB\b[^\n,]{0,35}\b(?:DDR\w*|LPDDR\w*|RAM|Memory)\b", title, re.I):
-        findings.append(_finding("CPC-TITLE-004", "compliance_title_ram", "Installed base RAM in title", title, "HIGH", "The title does not show the installed base RAM.", source, "Add the verified installed base RAM only; do not list selectable tiers."))
+        findings.append(_finding("CPC-TITLE-004", "compliance_title_ram", "Confirmed base RAM or observed Customize RAM choices in title", title, "HIGH", "The title does not state a supported RAM configuration.", source, "Use confirmed base RAM or the actual unit-qualified Customize choices; do not invent capacities."))
     if not re.search(r"\b\d+(?:\.\d+)?\s*(?:GB|TB)\b[^\n,]{0,25}\b(?:SSD|HDD|NVMe|Storage)\b", title, re.I):
-        findings.append(_finding("CPC-TITLE-005", "compliance_title_storage", "Installed base internal storage in title", title, "HIGH", "The title does not show the installed base storage.", source, "Add the verified installed base internal storage only; do not list selectable tiers."))
+        findings.append(_finding("CPC-TITLE-005", "compliance_title_storage", "Confirmed base storage or observed Customize storage choices in title", title, "HIGH", "The title does not state a supported internal storage configuration.", source, "Use confirmed base storage or actual unit-qualified Customize choices; preserve their exact labels."))
     if len(title) > 200:
         findings.append(_finding("CPC-TITLE-006", "compliance_title_length", "Title at or below approximately 200 characters", str(len(title)), "HIGH", "The title exceeds the internal Amazon Custom PC length limit.", source, "Shorten the title without removing seller brand, customization identity, OEM model, RAM, or storage."))
 
@@ -61,8 +62,12 @@ def check_compliance(record: ListingRecord, evidence: Evidence) -> list[Finding]
         if len(evidence.bullets) != 5:
             findings.append(_finding("STYLE-BULLET-002", "compliance_bullet_count", "Five bullet paragraphs, warranty first", str(len(evidence.bullets)), "REVIEW", "The creation project's default copy structure contains five bullets.", source, "Use the fixed warranty as bullet 1 and four concise benefit-led bullets."))
     for section, content in [("Title", title), ("Bullet Points", " ".join(evidence.bullets)), ("Product Description", evidence.description)]:
-        if has_capacity_options(content):
-            findings.append(_finding("CPC-BASE-001", "compliance_base_configuration", "Actual installed base RAM/storage only", f"{section}: {content}", "HIGH", "The creation project's workbook copy describes one sold base configuration, not selectable capacity lists.", source, "Replace capacity option lists with verified installed base RAM/storage; if unknown, retain an explicit draft VERIFY marker."))
+        for values, kind in option_groups(content):
+            offered = options(evidence, kind) if kind else options(evidence,'ram') + options(evidence,'storage')
+            allowed = capacity_values(' '.join(offered))
+            if not allowed or not values <= allowed:
+                findings.append(_finding("CPC-BASE-001", "compliance_base_configuration", "Capacity choices match the observed, unit-qualified Customize controls", f"{section}: {content}", "HIGH" if allowed else "REVIEW", "Capacity lists may describe actual sold upgrades under the user's latest instruction. These choices conflict with captured controls or lack matching option evidence.", source, "Use only captured Customize option labels; keep factory/base values separate. Put source gaps in audit notes, not buyer-facing placeholders."))
+                break
     if not first_bullet or not re.search(r"\bwarrant(?:y|ies)\b", first_bullet, re.I):
         findings.append(_finding("CPC-WARRANTY-001", "compliance_bullet_1_warranty", "Warranty disclosure in bullet point #1", first_bullet or "No readable first bullet", "HIGH", "Amazon Custom PC rules require the warranty disclosure in the first bullet.", source, "Make bullet point #1 a clear OEM-warranty and seller-upgrade-warranty disclosure."))
     else:
@@ -81,7 +86,7 @@ def check_compliance(record: ListingRecord, evidence: Evidence) -> list[Finding]
     if prohibited_customization:
         findings.append(_finding("CPC-SCOPE-001", "compliance_customization_scope", "Hardware customization is limited to RAM/storage; final Windows 11 Pro is fixed", prohibited_customization.group(0), "CRITICAL", "The claim conflicts with the creation project's hardware/customization scope.", source, "Correct the hardware claim. Describe Windows 11 Pro as the fixed sold OS, not buyer-selectable software customization."))
     if re.search(r"\bcustom(?:ized|ization)?\b", text, re.I) and not (re.search(r"\b(?:RAM|memory)\b", text, re.I) and re.search(r"\b(?:SSD|HDD|storage)\b", text, re.I)):
-        findings.append(_finding("CPC-SCOPE-002", "compliance_customization_disclosure", "Documented base RAM and storage customization scope", "RAM and/or storage disclosure is incomplete", "HIGH", "The listing does not clearly document both allowed hardware customization categories.", source, "Document the actual base RAM/storage and clarify that other hardware remains factory configured; Windows 11 Pro is fixed seller policy."))
+        findings.append(_finding("CPC-SCOPE-002", "compliance_customization_disclosure", "Documented supported RAM/storage customization scope", "RAM and/or storage disclosure is incomplete", "HIGH", "The listing does not clearly document both allowed hardware customization categories.", source, "Describe supported base hardware and observed upgrade choices separately; other hardware remains factory configured and Windows 11 Pro is fixed seller policy."))
 
     absolute = re.search(r"\b(?:guaranteed|100%\s+(?:safe|compatible|reliable)|best\s+(?:in|on)\s+the\s+market)\b", text, re.I)
     if absolute:

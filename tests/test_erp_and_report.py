@@ -46,7 +46,7 @@ def test_excel_contains_only_findings(tmp_path: Path) -> None:
     path = write_reports([pass_result, fail_result], tmp_path)
     workbook = load_workbook(path)
     sheet = workbook["审核修改"]
-    assert workbook.sheetnames[:4] == ["审核修改", "Product Details", "Offer", "Safety&Compliance"]
+    assert workbook.sheetnames[:5] == ["可复制文案", "审核修改", "Product Details", "Offer", "Safety&Compliance"]
     assert sheet["C1"].value == "Amazon 原内容（红色为问题）"
     assert sheet.max_row > 1
     assert all("B0HBDTJNJV" in str(sheet.cell(row=row, column=2).value) for row in range(2, sheet.max_row + 1))

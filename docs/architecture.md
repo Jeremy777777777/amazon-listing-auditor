@@ -51,7 +51,7 @@ The adapter queries `productTableFilterable` by exact `sku` and normalizes the p
 
 ## Excel review workflow
 
-The workbook loads the pinned `create-custom-pc-listing` XLSX from package resources. The first worksheet, 审核修改, groups findings by affected field and places captured content beside the recommended change. Cell links navigate to the original template. Product Details, Offer and Safety&Compliance retain all original row-1 labels and row-2 definitions. Row 3 holds captured content and turns red on a mapped finding; rows 4/5 hold audit status/source; rows 6/7 hold recommendations/reasons. The source workbook is never overwritten.
+The workbook loads the pinned `create-custom-pc-listing` XLSX from package resources. The first sheet, 可复制文案, stores complete title, five-paragraph bullet copy and HTML description in individual column-B cells without placeholders or editorial instructions. Its C column contains source/review notes. The 审核修改 reading view groups findings by field; links navigate to the original template. Product Details, Offer and Safety&Compliance retain row-1 labels and row-2 definitions. Row 3 holds captured content and turns red on mapped issues; rows 4/5 hold status/source; rows 6/7 hold complete recommendations/reasons. The source workbook is never overwritten.
 
 Missing capture remains blank with NOT_CAPTURED. CAPTURED_NOT_FLAGGED means only that the current rules did not flag the captured value; it is not VERIFIED or PASS. Offer SKU is not inferred from the internal ID. Multiple ASINs retain separate full template groups. Unmapped findings remain visible, image findings have a separate review tab, and complete Bullet Points and unavailable-source states are preserved in Source Evidence. Long text is split only in the reading view; original template/evidence strings remain intact. Review status and final notes are editable. CSV/JSON retain the individual finding model; this workbook is not a marketplace upload artifact.
 
@@ -61,7 +61,9 @@ GitHub Actions always uploads the Excel workbook together with machine-readable 
 
 ## Copy correction boundary
 
-Listings with actionable text/specification findings receive separate Title, Bullet Points, and Product Description correction rows. Drafts follow the adapted generation style reference but use only mapped Input/ERP facts. Missing facts remain explicit `[[VERIFY ...]]` placeholders, so the system cannot silently turn an assumption into publishable copy.
+Listings with actionable text/specification findings receive complete Title, Bullet Points and HTML Description replacements. Under the latest user instruction, supported base facts are combined with actual observed, ASIN-scoped Customize upgrade choices. Omit unknown optional facts/numbers; keep source gaps in separate COPY-SOURCE review findings rather than buyer-facing VERIFY placeholders. Core identity and warranty gaps withhold copy. This view does not mark the overall audit PASS.
+
+`Evidence.customization` and `--customization-evidence` preserve timestamp/source, ASIN, unit-qualified options and distinct base/selected facts. Do not infer factory/default values from the first/unchecked option, the old title or a platform maximum. In the VA-215 capture, the storage label is exactly 0.5TB, not 512GB. Unmatched option lists are HIGH when they contradict captured controls and REVIEW when matching evidence is missing. The CLI and Actions accept scoped evidence; they do not silently interact with terms-bearing Customize dialogs.
 
 ## Image audit boundary
 
