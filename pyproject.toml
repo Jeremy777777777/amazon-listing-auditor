@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "amazon-listing-auditor"
-version = "0.7.0"
+version = "0.8.0"
 description = "Audit completed Amazon listings against expected catalog data and evidence."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,9 @@ listing-auditor = "listing_auditor.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+listing_auditor = ["assets/*.xlsx", "assets/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

@@ -51,7 +51,9 @@ The adapter queries `productTableFilterable` by exact `sku` and normalizes the p
 
 ## Excel review workflow
 
-The first worksheet is the action list and contains findings only. Each row is one issue, so one product can have several rows. The editable review fields are highlighted and include a status dropdown. A second worksheet preserves source evidence for the products that have findings.
+The workbook loads the pinned `create-custom-pc-listing` XLSX from package resources. The first worksheet, 审核修改, groups findings by affected field and places captured content beside the recommended change. Cell links navigate to the original template. Product Details, Offer and Safety&Compliance retain all original row-1 labels and row-2 definitions. Row 3 holds captured content and turns red on a mapped finding; rows 4/5 hold audit status/source; rows 6/7 hold recommendations/reasons. The source workbook is never overwritten.
+
+Missing capture remains blank with NOT_CAPTURED. CAPTURED_NOT_FLAGGED means only that the current rules did not flag the captured value; it is not VERIFIED or PASS. Offer SKU is not inferred from the internal ID. Multiple ASINs retain separate full template groups. Unmapped findings remain visible, image findings have a separate review tab, and complete Bullet Points and unavailable-source states are preserved in Source Evidence. Long text is split only in the reading view; original template/evidence strings remain intact. Review status and final notes are editable. CSV/JSON retain the individual finding model; this workbook is not a marketplace upload artifact.
 
 The report layer groups results by exact internal ID and writes one product package per `VL-XXXX` folder. Each package contains Excel, JSON, CSV, Markdown, and a dedicated source-evidence JSON file. Multiple seller listings mapped to the same internal ID remain together. An unmapped URL uses `UNMAPPED-<ASIN>` until an internal ID is supplied.
 

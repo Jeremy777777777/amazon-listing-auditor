@@ -45,10 +45,12 @@ def test_excel_contains_only_findings(tmp_path: Path) -> None:
     )
     path = write_reports([pass_result, fail_result], tmp_path)
     workbook = load_workbook(path)
-    sheet = workbook["问题清单"]
-    assert sheet["A8"].value == "严重程度"
-    assert sheet.max_row == 8 + len(fail_result.findings)
-    assert all(sheet.cell(row=row, column=5).value == "VL-1249" for row in range(9, sheet.max_row + 1))
+    sheet = workbook["审核修改"]
+    assert workbook.sheetnames[:4] == ["审核修改", "Product Details", "Offer", "Safety&Compliance"]
+    assert sheet["C1"].value == "Amazon 原内容（红色为问题）"
+    assert sheet.max_row > 1
+    assert all("B0HBDTJNJV" in str(sheet.cell(row=row, column=2).value) for row in range(2, sheet.max_row + 1))
+    assert workbook["Product Details"]["C3"].value == fail_result.evidence.title
 
 
 def test_product_package_uses_internal_id_folder(tmp_path: Path) -> None:

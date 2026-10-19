@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/Jeremy777777777/create-custom-pc-listing",
+  "commit": "e2910c8fa93370105d53bcb49d3fc17f12b0ee1a",
+  "path": "assets/listing-workbook-template.xlsx",
+  "sha256": "8fd91b0fef3a5c68c0d4fa03c99234049f4cc1947aad6f2912bb6558106729a5",
+  "retrieved_on": "2026-10-19",
+  "usage": "Pinned byte-for-byte source template. Preserve all three sheets and exact field names and definitions. Row 3 is captured Amazon content, row 4 is audit status, row 5 is source; audit additions use rows 6 and 7. This review workbook is not a marketplace upload file."
+}

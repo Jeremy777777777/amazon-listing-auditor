@@ -21,7 +21,17 @@ Product Description 抓取会排除 `script`、`style`、`noscript` 和无关产
 
 ## Excel output
 
-Windows 本地运行默认保存到 `C:\Users\<当前用户>\OneDrive\Desktop\Listing Check\<内部编号>\`。例如 `VL-1249` 的文件会进入 `Listing Check\VL-1249\`。主表“问题清单”只包含有错误或有歧义的项目；已经确认无问题的 listing 不会进入主表。
+Windows 本地运行默认保存到 `C:\Users\<当前用户>\OneDrive\Desktop\Listing Check\<内部编号>\`。例如 `VL-1249` 的文件会进入 `Listing Check\VL-1249\`。
+
+v0.8 使用 `create-custom-pc-listing` 的真实 [Excel 模板](https://github.com/Jeremy777777777/create-custom-pc-listing/blob/e2910c8fa93370105d53bcb49d3fc17f12b0ee1a/assets/listing-workbook-template.xlsx)，不再以 19 列问题清单作为 Excel 主视图。模板固定随安装包发布，无需在审核时联网下载；来源版本见 `src/listing_auditor/assets/template-provenance.json`。
+
+- 首页 `审核修改` 按字段并排显示 **Amazon 原内容（红色） / 推荐修改（浅绿色） / 问题说明**，点击位置可跳到模板单元格。长文案分段展示，完整原文和建议保留在模板中。一个字段涉及多条规则时合并显示；待人工填写的审核状态和最终备注为黄色。
+- 保留 `Product Details`、`Offer`、`Safety&Compliance` 的所有原始字段名及 Definition。第 3 行 Value 填 Amazon 原文，存在问题的单元格标红；第 4 行为审核状态，第 5 行为来源，第 6 行新增推荐修改，第 7 行新增问题说明及 Rule ID。**不覆盖原内容为推荐值**。
+- `NOT_CAPTURED` 表示没有取得页面证据；`CAPTURED_NOT_FLAGGED` 仅表示已抓到且没有触发当前规则，不是验证通过；`ISSUE_REVIEW` 表示有问题或需要人工复核。不能从公开页面取得的 Offer / 合规字段保持空值，不补造。
+- 图片问题放在 `图片审核`；`Source Evidence` 保留原始 Title、每条 Bullet、Description、属性、图片 URL、输入与 ERP 状态。无法映射到模板的规则仍留在首页，不会消失。
+- 同一产品有多个 ASIN/Seller 时，各自拥有独立的完整模板表组，不相互覆盖。仅当所有记录均无 finding 时输出完整捕获结果和“没有记录到问题”说明；这不表示完整发布审核通过。
+
+这是一份审核工作簿；包含建议行和人工状态，不能直接当作 Seller Central 上传文件。JSON / CSV / Markdown 仍保留逐条 finding，方便追踪。
 
 每个产品文件夹包含：
 
@@ -45,9 +55,9 @@ Windows 本地运行默认保存到 `C:\Users\<当前用户>\OneDrive\Desktop\Li
 - 证据摘录
 - 人工审核状态、最终修改 / 备注、审核人与日期
 
-第二个 tab `Source Evidence` 保存 Amazon 与 ERP 的字段级 evidence，便于后续人工复查。
+`Source Evidence` 保存 Amazon 与 ERP 的字段级 evidence，便于后续人工复查。
 
-Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 写入问题清单。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。
+Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 映射到 Item Name、Bullet Point、Product Description 的推荐修改行。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。本版本迁移审核展示和导出流程；versioned audit rule pack 与生产项目的规则同步是单独的工作，不把模板更新当作所有规则已同步。
 
 ## 已固化的回归案例
 

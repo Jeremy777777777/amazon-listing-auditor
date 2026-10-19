@@ -34,7 +34,9 @@ def _canonical(record: ListingRecord, erp: ERPRecord | None) -> dict[str, str]:
         model = parts[0]
     elif brand and model and not model.casefold().startswith(brand.casefold()):
         model = f"{brand} {model}"
-    category = _value(fields, "category") or next((part for part in parts if re.search(r"\b(?:laptop|desktop|all-in-one|aio|mini pc|workstation)\b", part, re.I)), "")
+    category = _value(fields, "category")
+    if not category:
+        category = next((name for pattern, name in ((r"all-in-one|\baio\b", "All-in-One Desktop"), (r"\blaptop\b|\bnotebook\b", "Laptop"), (r"\bmini pc\b", "Mini PC"), (r"\bdesktop\b", "Desktop"), (r"\bworkstation\b", "Workstation")) if re.search(pattern, input_text, re.I)), "")
     cpu = _value(fields, "cpu") or (re.search(r"(?:Intel\s+)?(?:Core\s+)?(?:Ultra\s+\d+\s+\d+[A-Z]*|i[3579]-\d{4,5}[A-Z]*)", input_text, re.I).group(0) if re.search(r"(?:Intel\s+)?(?:Core\s+)?(?:Ultra\s+\d+\s+\d+[A-Z]*|i[3579]-\d{4,5}[A-Z]*)", input_text, re.I) else "")
     ram = _value(fields, "ram", "memory")
     storage = _value(fields, "ssd", "ssd2", "hdd", "storage")
