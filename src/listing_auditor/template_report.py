@@ -66,6 +66,10 @@ def _targets(finding: Finding) -> set[str]:
     field = finding.field
     if field.startswith("image_"):
         return set()
+    exact = {"compliance_bullet_warranty_exact": {"Bullet Point"}, "compliance_description_warranty_exact": {"Product Description"}, "compliance_attribute_warranty_exact": {"Warranty Description"}, "compliance_bullet_count": {"Bullet Point"}}
+    if field in exact: return exact[field]
+    if field == "compliance_base_configuration":
+        return {"Item Name" if finding.observed.startswith("Title:") else "Bullet Point" if finding.observed.startswith("Bullet Points:") else "Product Description"}
     if field in FIELD_MAP:
         return set(FIELD_MAP[field])
     if field == "copy_title" or field.startswith("compliance_title"):
@@ -142,6 +146,9 @@ def _recommendation(findings: list[Finding], field: str) -> str:
     # A full proposed copy block takes precedence over many short edit instructions.
     draft = next((f.corrected_value for f in findings if f.field == copy_field and f.corrected_value), None)
     if draft: return draft
+    if field == "Warranty Description":
+        exact = next((f.corrected_value for f in findings if f.rule_id == "CPC-WARRANTY-006" and f.corrected_value), None)
+        if exact: return exact
     return "\n\n".join(dict.fromkeys(f.corrected_value or f.expected or "待核实：请补充依据后修改" for f in findings))
 
 

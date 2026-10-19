@@ -107,11 +107,13 @@ def test_style_aligned_copy_corrections() -> None:
     )
     findings = style_correction_findings(_record(), evidence, None, check_compliance(_record(), evidence))
     corrections = {finding.field: finding.corrected_value for finding in findings}
-    assert corrections["copy_title"].startswith("MegaPC Customized Laptop, Created Using Dell 15 DC15250")
-    assert corrections["copy_bullet_points"].startswith("1. WARRANTY:")
+    assert corrections["copy_title"].startswith("MegaPC Custom Laptop, Created Using Dell 15 DC15250")
+    assert corrections["copy_title"].endswith("Win 11 Pro")
+    assert corrections["copy_bullet_points"].startswith("MegaPC provides a 1-year limited warranty")
+    assert len(corrections["copy_bullet_points"].split("\n\n")) == 5
     description = corrections["copy_product_description"]
     assert "<p><strong>Memory &amp; Storage, Customized by MegaPC</strong><br>\n" in description
-    assert description.split("\n\n")[-1].startswith("<p><strong>Warranty</strong><br>\n")
+    assert description.split("\n\n")[-1].startswith("<p><strong>Warranty and Disclosure</strong><br>\n")
     assert description.endswith("</p>")
     assert "**" not in description and "\\" not in description
 
@@ -129,4 +131,4 @@ def test_description_escapes_text_and_preserves_paragraph_structure():
     assert all("</strong><br>\n" in p for p in paragraphs[1:])
     assert '23.8&quot; FHD &lt;panel&gt; &amp; display' in description
     assert facts["screen"] in unescape(description)
-    assert "[[VERIFY RAM OPTIONS]]" in description
+    assert "[[VERIFY BASE RAM]]" in description

@@ -57,7 +57,9 @@ v0.8 使用 `create-custom-pc-listing` 的真实 [Excel 模板](https://github.c
 
 `Source Evidence` 保存 Amazon 与 ERP 的字段级 evidence，便于后续人工复查。
 
-Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 映射到 Item Name、Bullet Point、Product Description 的推荐修改行。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。本版本迁移审核展示和导出流程；versioned audit rule pack 与生产项目的规则同步是单独的工作，不把模板更新当作所有规则已同步。
+Title、Bullet Points、Product Description 的建议分别以 `STYLE-TITLE-001`、`STYLE-BULLET-001`、`STYLE-DESC-001` 映射到 Item Name、Bullet Point、Product Description 的推荐修改行。建议只使用已映射的 Input/ERP 事实；缺少的必要信息显示为 `[[VERIFY ...]]`，包含该标记的文案不能直接发布。
+
+v0.9 按用户要求同步 listing 创建项目的当前文案政策：`MegaPC Custom`、单一基础售卖配置、固定 Windows 11 Pro、五段 Bullet，以及 Bullet 1 / Description 最后的 Warranty and Disclosure / Warranty Description 完全相同的保修全文（含原封条已打开说明）。不再推荐 RAM/SSD 可选档位，也不再声明所有软件保持出厂状态。来源版本和边界见 [文案规则](references/listing-copy-style.md)；图片规则包不属于本次文案同步。可复制的 VA-215 HTML 示例见 [examples/VA-215-product-description.html](examples/VA-215-product-description.html)。
 
 Product Description 推荐内容固定保存为 HTML：`<p><strong>开头身份</strong></p>`，后续每节使用 `<p><strong>标题</strong><br>正文</p>`。文字中的 `&`、双引号等进行 HTML 转义。Excel 单元格保存完整 HTML 文本，供复制到支持 HTML 的描述编辑器；不再输出 Markdown 加粗或反斜杠分行。原始 Amazon Value 和 evidence 不会被建议格式覆盖。
 
